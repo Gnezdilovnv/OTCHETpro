@@ -41,12 +41,12 @@
             android:id="@+id/tv_dept_info_settings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Настройки для отдела: Миномет"
+            android:text="Настройки для подразделения: Миномет"
             android:textSize="12sp"
             android:textColor="#6f85a5"
             android:layout_marginBottom="16dp" />
 
-        <!-- 1. Сменить подразделение -->
+        <!-- 1. Подразделения -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -75,11 +75,11 @@
 
         </LinearLayout>
 
-        <!-- 2. Подподразделения -->
+        <!-- 2. Соисполнители -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="▼ Подподразделения (соисполнители)"
+            android:text="▼ Соисполнители"
             android:textSize="14sp"
             android:textColor="#0b1a2f"
             android:textStyle="bold"
@@ -313,6 +313,16 @@
                 android:textSize="12sp"
                 android:layout_marginBottom="4dp" />
 
+            <TextView
+                android:id="@+id/tv_export_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="11sp"
+                android:textColor="#0f7b3a"
+                android:visibility="gone"
+                android:layout_marginBottom="4dp" />
+
             <Button
                 android:id="@+id/btn_import"
                 android:layout_width="match_parent"
@@ -321,6 +331,16 @@
                 android:text="📥 Загрузить настройки"
                 android:textColor="#ffffff"
                 android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tv_import_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="11sp"
+                android:textColor="#0f7b3a"
+                android:visibility="gone"
                 android:layout_marginBottom="4dp" />
 
             <Button
@@ -338,7 +358,7 @@
             android:id="@+id/tv_settings_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="3 подподразделений · 1 шаблонов · 16 переменных"
+            android:text="3 подразделений · 1 соисполнителей · 1 шаблонов · 16 переменных"
             android:textSize="11sp"
             android:textColor="#6f85a5"
             android:paddingTop="12dp"
@@ -348,7 +368,7 @@
             android:id="@+id/tv_settings_tag"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Миномет"
+            android:text="Миномет — расчет миномета «ТИГР»"
             android:textSize="11sp"
             android:textColor="#6f85a5"
             android:textStyle="bold" />
