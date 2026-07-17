@@ -28,7 +28,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Сохранен"
-            android:padding="2dp 10dp"
+            android:padding="2dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
             android:background="#eef4fc"
             android:textColor="#1a4cba"
             android:textSize="10sp" />
