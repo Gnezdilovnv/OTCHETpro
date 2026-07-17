@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.OTCHETpro" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">#0b1a2f</item>
+        <item name="colorPrimaryDark">#0b1a2f</item>
+        <item name="colorAccent">#0b1a2f</item>
+        <item name="android:windowBackground">#ffffff</item>
+    </style>
+</resources>

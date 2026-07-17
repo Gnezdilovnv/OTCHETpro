@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffffff">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/tv_title_report"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Отчет"
+                android:textSize="18sp"
+                android:textColor="#0b1a2f"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_close_report"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                android:text="✕"
+                android:textColor="#6f85a5"
+                android:textSize="18sp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Сохранен"
+            android:padding="4dp 12dp"
+            android:background="#eef4fc"
+            android:textColor="#1a4cba"
+            android:textSize="12sp"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/tv_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:background="#f5f7fb"
+            android:text=""
+            android:textSize="13sp"
+            android:fontFamily="serif"
+            android:minHeight="100dp"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btn_open_file"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/btn_success"
+            android:text="📂 Открыть файл"
+            android:textColor="#ffffff"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_send_email"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/btn_gmail"
+            android:text="📨 Отправить на почту"
+            android:textColor="#ffffff"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_share"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#6f85a5"
+            android:text="↗ Поделиться"
+            android:textColor="#ffffff"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_email_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="✅ Письмо отправлено"
+            android:textSize="12sp"
+            android:textColor="#0f7b3a"
+            android:padding="8dp"
+            android:background="#e2f3e6"
+            android:gravity="center"
+            android:visibility="gone"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/tv_report_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Создан: --"
+            android:textSize="11sp"
+            android:textColor="#6f85a5"
+            android:paddingTop="12dp"
+            android:layout_marginTop="12dp" />
+
+    </LinearLayout>
+
+</ScrollView>

@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#ffffff">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="10dp">
+
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Боевой журнал"
+            android:textSize="18sp"
+            android:textColor="#0b1a2f"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_settings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:text="Настройки"
+            android:textColor="#6f85a5"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/btn_switch_dept"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:text="Сменить"
+            android:textColor="#6f85a5"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_dept_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Текущий отдел: БпЛА — ПВР №2 «Пчела»"
+        android:textSize="12sp"
+        android:textColor="#6f85a5"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/btn_create_report"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:background="@drawable/btn_primary"
+        android:text="Создать отчет"
+        android:textColor="#ffffff"
+        android:textSize="15sp"
+        android:layout_marginBottom="16dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+
+        <Button
+            android:id="@+id/filter_all"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:background="@drawable/btn_primary"
+            android:text="Все"
+            android:textColor="#ffffff"
+            android:textSize="11sp"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/filter_saved"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:background="@drawable/btn_outline"
+            android:text="Сохранен"
+            android:textColor="#0b1a2f"
+            android:textSize="11sp"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/filter_sent"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:background="@drawable/btn_outline"
+            android:text="Отправлен"
+            android:textColor="#0b1a2f"
+            android:textSize="11sp" />
+
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_reports"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:text="Нет отчетов"
+        android:textSize="14sp"
+        android:textColor="#8a9bb8"
+        android:gravity="center"
+        android:visibility="visible" />
+
+    <TextView
+        android:id="@+id/tv_count"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Всего: 0"
+        android:textSize="11sp"
+        android:textColor="#6f85a5"
+        android:paddingTop="12dp"
+        android:layout_marginTop="12dp" />
+
+</LinearLayout>

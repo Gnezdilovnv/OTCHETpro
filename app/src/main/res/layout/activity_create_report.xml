@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffffff">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:id="@+id/tv_title_create"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Новый отчет"
+                android:textSize="18sp"
+                android:textColor="#0b1a2f"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_close_create"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                android:text="✕"
+                android:textColor="#6f85a5"
+                android:textSize="18sp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Шаблон"
+            android:textSize="14sp"
+            android:textColor="#3a4f6e"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/spinner_template"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Предпросмотр"
+            android:textSize="14sp"
+            android:textColor="#3a4f6e"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tv_preview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:background="#f5f7fb"
+            android:text=""
+            android:textSize="13sp"
+            android:fontFamily="serif"
+            android:minHeight="100dp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Заполните поля"
+            android:textSize="14sp"
+            android:textColor="#3a4f6e"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/linear_variables"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <Button
+            android:id="@+id/btn_save_report"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:background="@drawable/btn_primary"
+            android:text="Сохранить"
+            android:textColor="#ffffff"
+            android:textSize="15sp"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:id="@+id/tv_var_count"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="0 переменных"
+            android:textSize="11sp"
+            android:textColor="#6f85a5"
+            android:paddingTop="12dp"
+            android:layout_marginTop="12dp" />
+
+    </LinearLayout>
+
+</ScrollView>

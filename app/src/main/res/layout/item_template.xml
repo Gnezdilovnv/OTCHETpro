@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="#ffffff"
+    android:layout_marginBottom="4dp">
+
+    <TextView
+        android:id="@+id/tv_template_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Шаблон"
+        android:textSize="14sp"
+        android:textColor="#0b1a2f"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tv_template_preview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Текст..."
+        android:textSize="12sp"
+        android:textColor="#6f85a5"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="4dp">
+
+        <Button
+            android:id="@+id/btn_template_edit"
+            android:layout_width="0dp"
+            android:layout_height="28dp"
+            android:layout_weight="1"
+            android:background="#0b1a2f"
+            android:text="✎"
+            android:textColor="#ffffff"
+            android:textSize="12sp"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/btn_template_delete"
+            android:layout_width="0dp"
+            android:layout_height="28dp"
+            android:layout_weight="1"
+            android:background="#b33a3a"
+            android:text="✕"
+            android:textColor="#ffffff"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+</LinearLayout>

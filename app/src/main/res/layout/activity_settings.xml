@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffffff">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Настройки"
+                android:textSize="18sp"
+                android:textColor="#0b1a2f"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_close_settings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                android:text="✕"
+                android:textColor="#6f85a5"
+                android:textSize="18sp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_dept_info_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Настройки для отдела: Миномет"
+            android:textSize="12sp"
+            android:textColor="#6f85a5"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Сменить подразделение -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▼ Сменить подразделение"
+            android:textSize="14sp"
+            android:textColor="#0b1a2f"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:id="@+id/accordion_dept_header" />
+
+        <LinearLayout
+            android:id="@+id/accordion_dept_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp"
+            android:visibility="visible">
+
+            <Button
+                android:id="@+id/dept_bpla"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="@drawable/btn_outline"
+                android:text="БпЛА (ПВР №2 «Пчела»)"
+                android:textColor="#0b1a2f"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/dept_minomet"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="@drawable/btn_outline"
+                android:text="Миномет (расчет миномета «ТИГР»)"
+                android:textColor="#0b1a2f"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/dept_artillery"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="@drawable/btn_outline"
+                android:text="Артиллерия (152-мм гаубица «Гиацинт»)"
+                android:textColor="#0b1a2f"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/dept_tanks"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="@drawable/btn_outline"
+                android:text="Танки (танковый взвод Т-72)"
+                android:textColor="#0b1a2f"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <!-- Подподразделения -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▼ Подподразделения (соисполнители)"
+            android:textSize="14sp"
+            android:textColor="#0b1a2f"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:id="@+id/accordion_subdepts_header" />
+
+        <LinearLayout
+            android:id="@+id/accordion_subdepts_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/ll_subdepts_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <EditText
+                    android:id="@+id/et_subdept_new"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:hint="Название"
+                    android:padding="8dp"
+                    android:background="#ffffff"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btn_subdept_add"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="@drawable/btn_primary"
+                    android:text="Добавить"
+                    android:textColor="#ffffff"
+                    android:textSize="12sp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:layout_marginStart="8dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Редактор шаблонов -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▼ Редактор шаблонов"
+            android:textSize="14sp"
+            android:textColor="#0b1a2f"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:id="@+id/accordion_templates_header" />
+
+        <LinearLayout
+            android:id="@+id/accordion_templates_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/ll_templates_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <Button
+                android:id="@+id/btn_template_add"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="@drawable/btn_primary"
+                android:text="➕ Добавить шаблон"
+                android:textColor="#ffffff"
+                android:textSize="12sp"
+                android:layout_marginTop="8dp" />
+
+        </LinearLayout>
+
+        <!-- Переменные -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▼ Переменные (23 типа)"
+            android:textSize="14sp"
+            android:textColor="#0b1a2f"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:id="@+id/accordion_vars_header" />
+
+        <LinearLayout
+            android:id="@+id/accordion_vars_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/ll_vars_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <Button
+                android:id="@+id/btn_var_add"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="@drawable/btn_primary"
+                android:text="➕ Добавить переменную"
+                android:textColor="#ffffff"
+                android:textSize="12sp"
+                android:layout_marginTop="8dp" />
+
+        </LinearLayout>
+
+        <!-- Адресная книга -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▼ Адресная книга"
+            android:textSize="14sp"
+            android:textColor="#0b1a2f"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:id="@+id/accordion_recipients_header" />
+
+        <LinearLayout
+            android:id="@+id/accordion_recipients_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/ll_recipients_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <EditText
+                    android:id="@+id/et_recipient_name"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:hint="ФИО"
+                    android:padding="8dp"
+                    android:background="#ffffff"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="4dp" />
+
+                <EditText
+                    android:id="@+id/et_recipient_email"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:hint="Email"
+                    android:padding="8dp"
+                    android:background="#ffffff"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="4dp" />
+
+                <Button
+                    android:id="@+id/btn_recipient_add"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="@drawable/btn_primary"
+                    android:text="Добавить"
+                    android:textColor="#ffffff"
+                    android:textSize="12sp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Экспорт/Импорт -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▼ Экспорт / Импорт"
+            android:textSize="14sp"
+            android:textColor="#0b1a2f"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:id="@+id/accordion_export_header" />
+
+        <LinearLayout
+            android:id="@+id/accordion_export_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp"
+            android:visibility="visible">
+
+            <Button
+                android:id="@+id/btn_export"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="#1a4cba"
+                android:text="📤 Выгрузить настройки"
+                android:textColor="#ffffff"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/btn_import"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="#b45a1c"
+                android:text="📥 Загрузить настройки"
+                android:textColor="#ffffff"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/btn_template_download"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="#0b1a2f"
+                android:text="📄 Скачать шаблон настроек"
+                android:textColor="#ffffff"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_settings_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="3 подподразделений · 1 шаблонов · 16 переменных"
+            android:textSize="11sp"
+            android:textColor="#6f85a5"
+            android:paddingTop="12dp"
+            android:layout_marginTop="12dp" />
+
+        <TextView
+            android:id="@+id/tv_settings_tag"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Миномет"
+            android:textSize="11sp"
+            android:textColor="#6f85a5"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+</ScrollView>
