@@ -12,6 +12,8 @@
         android:theme="@style/Theme.OTCHETpro"
         android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true"
+        android:largeHeap="true"
+        android:hardwareAccelerated="true"
         tools:targetApi="31">
 
         <provider
@@ -27,6 +29,7 @@
         <activity
             android:name=".activities.DeptSelectActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -36,22 +39,27 @@
 
         <activity
             android:name=".activities.MainActivity"
+            android:configChanges="orientation|screenSize"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".activities.CreateReportActivity"
+            android:configChanges="orientation|screenSize"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".activities.ReportDetailActivity"
+            android:configChanges="orientation|screenSize"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".activities.SettingsActivity"
+            android:configChanges="orientation|screenSize"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".activities.TemplateEditorActivity"
+            android:configChanges="orientation|screenSize"
             android:windowSoftInputMode="adjustResize" />
 
     </application>

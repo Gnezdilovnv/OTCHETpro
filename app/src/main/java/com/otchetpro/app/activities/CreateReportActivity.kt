@@ -1,6 +1,8 @@
 package com.otchetpro.app.activities
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -23,6 +25,7 @@ class CreateReportActivity : AppCompatActivity() {
     private lateinit var tvVarCount: TextView
     private lateinit var rvSubDepts: RecyclerView
     private lateinit var tvSubDeptsHint: TextView
+    private lateinit var progressBar: ProgressBar
     
     private var dept = ""
     private val variableValues = mutableMapOf<String, String>()
@@ -33,6 +36,7 @@ class CreateReportActivity : AppCompatActivity() {
     private var allDepts = listOf<String>()
     private var selectedSubDepts = mutableListOf<String>()
     private lateinit var subDeptAdapter: SubDeptAdapter
+    private var isDraftSaved = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +52,7 @@ class CreateReportActivity : AppCompatActivity() {
         tvVarCount = findViewById(R.id.tv_var_count)
         rvSubDepts = findViewById(R.id.rv_subdepts)
         tvSubDeptsHint = findViewById(R.id.tv_subdepts_hint)
+        progressBar = findViewById(R.id.progress_bar)
         
         dept = SharedPrefs.getDept(this)
         allDepts = SharedPrefs.getDepts(this)
@@ -70,8 +75,20 @@ class CreateReportActivity : AppCompatActivity() {
         }
 
         btnSave.setOnClickListener { saveReport() }
-        btnClose.setOnClickListener { finish() }
+        btnClose.setOnClickListener { 
+            if (!isDraftSaved && variableValues.isNotEmpty()) {
+                AlertDialog.Builder(this)
+                    .setTitle("Сохранить черновик?")
+                    .setMessage("У вас есть незаполненные данные. Сохранить их как черновик?")
+                    .setPositiveButton("Сохранить") { _, _ -> saveDraft() }
+                    .setNegativeButton("Не сохранять") { _, _ -> finish() }
+                    .show()
+            } else {
+                finish()
+            }
+        }
         
+        loadDraft()
         updatePreview()
     }
 
@@ -125,14 +142,9 @@ class CreateReportActivity : AppCompatActivity() {
         spinnerTemplate.adapter = adapter
     }
 
-    // ============================================================
-    // СОИСПОЛНИТЕЛИ — ПОДТЯГИВАЮТСЯ ИЗ ВСЕХ ПОДРАЗДЕЛЕНИЙ
-    // ============================================================
     private fun setupSubDepts() {
         val allUnits = SharedPrefs.getAllUnits(this)
-        // Группируем по подразделению
         val grouped = allUnits.groupBy { it.first }
-        
         val items = grouped.flatMap { (deptName, units) ->
             units.map { "${deptName}: ${it.second}" }
         }
@@ -151,6 +163,37 @@ class CreateReportActivity : AppCompatActivity() {
             rvSubDepts.visibility = View.GONE
             tvSubDeptsHint.visibility = View.GONE
         }
+    }
+
+    // ============================================================
+    // МАСКА ВВОДА ДАТЫ
+    // ============================================================
+    private fun setupDateMask(editText: EditText) {
+        editText.addTextChangedListener(object : TextWatcher {
+            private var isUpdating = false
+            
+            override fun afterTextChanged(s: Editable?) {
+                if (isUpdating) return
+                val text = s.toString()
+                val clean = text.replace(Regex("[^0-9]"), "")
+                
+                if (clean.length >= 8) {
+                    isUpdating = true
+                    val formatted = "${clean.substring(0,2)}.${clean.substring(2,4)}.${clean.substring(4,8)}"
+                    editText.setText(formatted)
+                    editText.setSelection(formatted.length)
+                    isUpdating = false
+                } else if (clean.length >= 4 && clean.length < 6) {
+                    isUpdating = true
+                    val formatted = "${clean.substring(0,2)}.${clean.substring(2)}"
+                    editText.setText(formatted)
+                    editText.setSelection(formatted.length)
+                    isUpdating = false
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
     }
 
     private fun generateVariableFields() {
@@ -176,10 +219,12 @@ class CreateReportActivity : AppCompatActivity() {
                     hint = "ДД.ММ.ГГГГ"
                     setPadding(12, 12, 12, 12)
                     setBackgroundResource(android.R.drawable.editbox_background)
+                    setupDateMask(this)
                     addTextChangedListener(object : android.text.TextWatcher {
                         override fun afterTextChanged(text: android.text.Editable?) { 
                             variableValues[variable.name] = text.toString()
                             updatePreview()
+                            autoSaveDraft()
                         }
                         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -194,6 +239,7 @@ class CreateReportActivity : AppCompatActivity() {
                         override fun afterTextChanged(text: android.text.Editable?) { 
                             variableValues[variable.name] = text.toString()
                             updatePreview()
+                            autoSaveDraft()
                         }
                         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -210,6 +256,7 @@ class CreateReportActivity : AppCompatActivity() {
                             val selected = (parent?.adapter as? ArrayAdapter<String>)?.getItem(position) ?: ""
                             variableValues[variable.name] = selected
                             updatePreview()
+                            autoSaveDraft()
                         }
                         override fun onNothingSelected(parent: AdapterView<*>?) {}
                     })
@@ -225,6 +272,7 @@ class CreateReportActivity : AppCompatActivity() {
                             val selected = (parent?.adapter as? ArrayAdapter<String>)?.getItem(position) ?: ""
                             variableValues[variable.name] = selected
                             updatePreview()
+                            autoSaveDraft()
                         }
                         override fun onNothingSelected(parent: AdapterView<*>?) {}
                     })
@@ -237,6 +285,7 @@ class CreateReportActivity : AppCompatActivity() {
                         override fun afterTextChanged(text: android.text.Editable?) { 
                             variableValues[variable.name] = text.toString()
                             updatePreview()
+                            autoSaveDraft()
                         }
                         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -274,25 +323,16 @@ class CreateReportActivity : AppCompatActivity() {
         val subStr = if (selectedSubDepts.isNotEmpty()) selectedSubDepts.joinToString(", ") else ""
         text = text.replace("{{Соисполнители}}", subStr)
         
-        // Условный блок для соисполнителей
         if (selectedSubDepts.isEmpty()) {
             text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}.*?\\{\\{/Соисполнители\\}\\}"), "")
         } else {
             text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}(.*?)\\{\\{Соисполнители\\}\\}(.*?)\\{\\{/Соисполнители\\}\\}"), "$1$subStr$2")
         }
         
-        // Собираем все переменные, которые есть в шаблоне
-        val templateVars = mutableListOf<Variable>()
-        allVariables.forEach { variable ->
-            if (text.contains("{{${variable.name}}}")) {
-                templateVars.add(variable)
-            }
-        }
-        
+        // Подставляем переменные
+        val templateVars = allVariables.filter { text.contains("{{${it.name}}}") }
         var filledCount = 0
-        var hasEmptyRequired = false
         
-        // Подставляем значения переменных
         templateVars.forEach { variable ->
             val placeholder = "{{${variable.name}}}"
             val value = variableValues[variable.name] ?: ""
@@ -301,16 +341,61 @@ class CreateReportActivity : AppCompatActivity() {
                 text = text.replace(placeholder, value)
                 filledCount++
             } else if (variable.required) {
-                hasEmptyRequired = true
-                // Оставляем placeholder, он будет подсвечен красным
+                // Оставляем placeholder для подсветки
             } else {
                 text = text.replace(placeholder, "")
             }
         }
         
         tvPreview.text = text
-        tvVarCount.text = "$filledCount из ${templateVars.size} переменных заполнено" +
-                          if (hasEmptyRequired) " ⚠️" else ""
+        tvVarCount.text = "$filledCount из ${templateVars.size} переменных заполнено"
+    }
+
+    // ============================================================
+    // АВТОСОХРАНЕНИЕ ЧЕРНОВИКА
+    // ============================================================
+    private fun autoSaveDraft() {
+        val prefs = getSharedPreferences("draft", MODE_PRIVATE)
+        prefs.edit()
+            .putString("draft_data", variableValues.toString())
+            .putString("draft_dept", selectedDept)
+            .putString("draft_unit", selectedUnit)
+            .putInt("draft_template", spinnerTemplate.selectedItemPosition)
+            .apply()
+        isDraftSaved = true
+    }
+
+    private fun loadDraft() {
+        val prefs = getSharedPreferences("draft", MODE_PRIVATE)
+        val draftData = prefs.getString("draft_data", "")
+        if (draftData.isNullOrEmpty()) return
+        
+        try {
+            // Восстанавливаем значения
+            val data = draftData.replace("{", "").replace("}", "").split(", ")
+            data.forEach { pair ->
+                val parts = pair.split("=")
+                if (parts.size == 2) {
+                    variableValues[parts[0]] = parts[1]
+                }
+            }
+            
+            val deptPos = allDepts.indexOf(prefs.getString("draft_dept", ""))
+            if (deptPos >= 0) spinnerDept.setSelection(deptPos)
+            
+            val templatePos = prefs.getInt("draft_template", 0)
+            if (templatePos < templates.size) spinnerTemplate.setSelection(templatePos)
+            
+            Toast.makeText(this, "💾 Черновик восстановлен", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            // Ошибка восстановления
+        }
+    }
+
+    private fun saveDraft() {
+        autoSaveDraft()
+        Toast.makeText(this, "💾 Черновик сохранен", Toast.LENGTH_SHORT).show()
+        finish()
     }
 
     private fun saveReport() {
@@ -319,6 +404,8 @@ class CreateReportActivity : AppCompatActivity() {
             Toast.makeText(this, "Выберите шаблон", Toast.LENGTH_SHORT).show()
             return
         }
+        
+        progressBar.visibility = View.VISIBLE
         
         var text = templates[position].text
         
@@ -348,7 +435,6 @@ class CreateReportActivity : AppCompatActivity() {
             if (variable.required && value.isEmpty()) {
                 allFilled = false
                 missingFields.add(variable.name)
-                text = text.replace("{{${variable.name}}}", "[${variable.name} не заполнено]")
             } else if (value.isNotEmpty()) {
                 text = text.replace("{{${variable.name}}}", value)
             } else {
@@ -357,8 +443,13 @@ class CreateReportActivity : AppCompatActivity() {
         }
         
         if (!allFilled) {
+            progressBar.visibility = View.GONE
             val message = "Заполните обязательные поля:\n" + missingFields.joinToString(", ")
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+            AlertDialog.Builder(this)
+                .setTitle("Ошибка")
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .show()
             return
         }
         
@@ -372,16 +463,26 @@ class CreateReportActivity : AppCompatActivity() {
         )
 
         CoroutineScope(Dispatchers.IO).launch {
-            val id = AppDatabase.getInstance(this@CreateReportActivity).reportDao().insert(report)
-            val fileName = "Отчет_${id}.docx"
-            val file = DocxGenerator.generateReport(this@CreateReportActivity, text, fileName)
-            withContext(Dispatchers.Main) {
-                if (file != null) {
-                    Toast.makeText(this@CreateReportActivity, "✅ Сохранено: ${file.absolutePath}", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this@CreateReportActivity, "❌ Ошибка сохранения файла", Toast.LENGTH_SHORT).show()
+            try {
+                val id = AppDatabase.getInstance(this@CreateReportActivity).reportDao().insert(report)
+                val fileName = "Отчет_${id}.docx"
+                val file = DocxGenerator.generateReport(this@CreateReportActivity, text, fileName)
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    // Очищаем черновик
+                    getSharedPreferences("draft", MODE_PRIVATE).edit().clear().apply()
+                    if (file != null) {
+                        Toast.makeText(this@CreateReportActivity, "✅ Сохранено: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this@CreateReportActivity, "❌ Ошибка сохранения файла", Toast.LENGTH_SHORT).show()
+                    }
+                    finish()
                 }
-                finish()
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    Toast.makeText(this@CreateReportActivity, "❌ Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

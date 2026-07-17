@@ -2,38 +2,77 @@ package com.otchetpro.app.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.otchetpro.app.R
 import com.otchetpro.app.utils.SharedPrefs
 
 class DeptSelectActivity : AppCompatActivity() {
 
+    private lateinit var deptList: LinearLayout
+    private lateinit var progressBar: ProgressBar
+    private lateinit var tvEmpty: TextView
+    private var currentDept = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dept_select)
 
-        val deptList = findViewById<LinearLayout>(R.id.dept_list_container)
+        deptList = findViewById(R.id.dept_list_container)
+        progressBar = findViewById(R.id.progress_bar)
+        tvEmpty = findViewById(R.id.tv_empty)
+
+        currentDept = SharedPrefs.getDept(this)
+        loadDepts()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Обновляем список при возврате из настроек
+        val newDept = SharedPrefs.getDept(this)
+        if (newDept != currentDept) {
+            currentDept = newDept
+            loadDepts()
+        }
+    }
+
+    private fun loadDepts() {
+        progressBar.visibility = View.VISIBLE
+        deptList.removeAllViews()
+        tvEmpty.visibility = View.GONE
 
         val depts = SharedPrefs.getDepts(this)
+
         if (depts.isEmpty()) {
-            // Если список пуст — создаем дефолтный
-            SharedPrefs.saveDepts(this, listOf("БпЛА", "Миномет", "Артиллерия", "Танки"))
-            recreate()
+            tvEmpty.visibility = View.VISIBLE
+            tvEmpty.text = "Нет подразделений.\nДобавьте в настройках."
+            progressBar.visibility = View.GONE
             return
         }
-
-        deptList.removeAllViews()
 
         depts.forEach { deptName ->
             val btn = Button(this).apply {
                 text = deptName
                 setPadding(16, 24, 16, 24)
                 textSize = 16f
-                setBackgroundResource(R.drawable.btn_outline)
+                
+                // Выделяем текущее подразделение
+                if (deptName == currentDept) {
+                    setBackgroundResource(R.drawable.btn_primary)
+                    setTextColor(0xFFFFFFFF.toInt())
+                } else {
+                    setBackgroundResource(R.drawable.btn_outline)
+                    setTextColor(0xFF0B1A2F.toInt())
+                }
+                
                 setOnClickListener {
                     SharedPrefs.saveDept(this@DeptSelectActivity, deptName)
+                    currentDept = deptName
+                    loadDepts() // Обновляем выделение
                     startActivity(Intent(this@DeptSelectActivity, MainActivity::class.java))
                     finish()
                 }
@@ -45,5 +84,7 @@ class DeptSelectActivity : AppCompatActivity() {
             btn.layoutParams = params
             deptList.addView(btn)
         }
+
+        progressBar.visibility = View.GONE
     }
 }

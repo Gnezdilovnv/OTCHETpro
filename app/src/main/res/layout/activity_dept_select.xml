@@ -24,6 +24,22 @@
         android:textColor="#6f85a5"
         android:layout_marginBottom="24dp" />
 
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_empty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="14sp"
+        android:textColor="#8a9bb8"
+        android:gravity="center"
+        android:visibility="gone" />
+
     <LinearLayout
         android:id="@+id/dept_list_container"
         android:layout_width="match_parent"

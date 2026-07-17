@@ -50,7 +50,6 @@ class SettingsActivity : AppCompatActivity() {
     private var variables = mutableListOf<Variable>()
     private var recipients = mutableListOf<Recipient>()
 
-    // Регистрация для выбора файла
     private val filePickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -190,10 +189,10 @@ class SettingsActivity : AppCompatActivity() {
                         Toast.makeText(this@SettingsActivity, "Нельзя удалить последнее подразделение", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
-                    AlertDialog.Builder(this@SettingsActivity)
-                        .setTitle("Удалить подразделение")
-                        .setMessage("Удалить $name и все связанные данные?")
-                        .setPositiveButton("Удалить") { _, _ ->
+                    showDeleteConfirmDialog(
+                        title = "Удалить подразделение?",
+                        message = "Удалить $name и все связанные данные?",
+                        onConfirm = {
                             allDepts.removeAt(i)
                             SharedPrefs.saveDepts(this@SettingsActivity, allDepts)
                             val vars = SharedPrefs.getVariables(this@SettingsActivity).toMutableList()
@@ -209,8 +208,7 @@ class SettingsActivity : AppCompatActivity() {
                             loadData()
                             Toast.makeText(this@SettingsActivity, "✅ Удалено", Toast.LENGTH_SHORT).show()
                         }
-                        .setNegativeButton("Отмена", null)
-                        .show()
+                    )
                 }
             }
             row.addView(tv)
@@ -228,14 +226,18 @@ class SettingsActivity : AppCompatActivity() {
             text = "➕"
             setOnClickListener {
                 val name = addDeptInput.text.toString().trim()
-                if (name.isNotEmpty() && !allDepts.contains(name)) {
+                if (name.isNotEmpty()) {
+                    if (allDepts.contains(name)) {
+                        Toast.makeText(this@SettingsActivity, "❌ Подразделение уже существует", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
+                    }
                     allDepts.add(name)
                     SharedPrefs.saveDepts(this@SettingsActivity, allDepts)
                     addDeptInput.text.clear()
                     loadData()
                     Toast.makeText(this@SettingsActivity, "✅ Подразделение добавлено", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@SettingsActivity, "Некорректное имя или уже существует", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@SettingsActivity, "Введите название", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -275,9 +277,16 @@ class SettingsActivity : AppCompatActivity() {
             val deleteBtn = Button(this).apply {
                 text = "✕"
                 setOnClickListener {
-                    subDepts.removeAt(i)
-                    SharedPrefs.saveSubDepts(this@SettingsActivity, subDepts)
-                    loadData()
+                    showDeleteConfirmDialog(
+                        title = "Удалить соисполнителя?",
+                        message = "Удалить \"$name\"?",
+                        onConfirm = {
+                            subDepts.removeAt(i)
+                            SharedPrefs.saveSubDepts(this@SettingsActivity, subDepts)
+                            loadData()
+                            Toast.makeText(this@SettingsActivity, "✅ Удалено", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             }
             row.addView(tv)
@@ -318,9 +327,16 @@ class SettingsActivity : AppCompatActivity() {
             val deleteBtn = Button(this).apply { 
                 text = "✕ Удалить"
                 setOnClickListener {
-                    templates.removeAt(i)
-                    SharedPrefs.saveTemplates(this@SettingsActivity, templates)
-                    loadData()
+                    showDeleteConfirmDialog(
+                        title = "Удалить шаблон?",
+                        message = "Удалить шаблон \"${t.name}\"?",
+                        onConfirm = {
+                            templates.removeAt(i)
+                            SharedPrefs.saveTemplates(this@SettingsActivity, templates)
+                            loadData()
+                            Toast.makeText(this@SettingsActivity, "✅ Удалено", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             }
             btnRow.addView(editBtn)
@@ -367,9 +383,16 @@ class SettingsActivity : AppCompatActivity() {
             val deleteBtn = Button(this).apply {
                 text = "✕"
                 setOnClickListener {
-                    variables.removeAt(i)
-                    SharedPrefs.saveVariables(this@SettingsActivity, variables)
-                    loadData()
+                    showDeleteConfirmDialog(
+                        title = "Удалить переменную?",
+                        message = "Удалить переменную \"${v.name}\"?",
+                        onConfirm = {
+                            variables.removeAt(i)
+                            SharedPrefs.saveVariables(this@SettingsActivity, variables)
+                            loadData()
+                            Toast.makeText(this@SettingsActivity, "✅ Удалено", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             }
             btnRow.addView(editBtn)
@@ -392,15 +415,35 @@ class SettingsActivity : AppCompatActivity() {
             val deleteBtn = Button(this).apply { 
                 text = "✕"
                 setOnClickListener {
-                    recipients.removeAt(i)
-                    SharedPrefs.saveRecipients(this@SettingsActivity, recipients)
-                    loadData()
+                    showDeleteConfirmDialog(
+                        title = "Удалить получателя?",
+                        message = "Удалить \"${r.name}\" из адресной книги?",
+                        onConfirm = {
+                            recipients.removeAt(i)
+                            SharedPrefs.saveRecipients(this@SettingsActivity, recipients)
+                            loadData()
+                            Toast.makeText(this@SettingsActivity, "✅ Удалено", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             }
             row.addView(tv)
             row.addView(deleteBtn)
             llRecipients.addView(row)
         }
+    }
+
+    // ============================================================
+    // УНИВЕРСАЛЬНЫЙ ДИАЛОГ ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ
+    // ============================================================
+    private fun showDeleteConfirmDialog(title: String, message: String, onConfirm: () -> Unit) {
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .setPositiveButton("Удалить") { _, _ -> onConfirm() }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun getDefaultUnit(dept: String): String {
@@ -416,6 +459,10 @@ class SettingsActivity : AppCompatActivity() {
     private fun addSubDept() {
         val name = etSubDeptNew.text.toString().trim()
         if (name.isEmpty()) { Toast.makeText(this, "Введите название", Toast.LENGTH_SHORT).show(); return }
+        if (subDepts.contains(name)) {
+            Toast.makeText(this, "❌ Соисполнитель уже существует", Toast.LENGTH_SHORT).show()
+            return
+        }
         subDepts.add(name)
         SharedPrefs.saveSubDepts(this, subDepts)
         etSubDeptNew.text.clear()
@@ -427,7 +474,10 @@ class SettingsActivity : AppCompatActivity() {
         val name = etRecipientName.text.toString().trim()
         val email = etRecipientEmail.text.toString().trim()
         if (name.isEmpty() || email.isEmpty()) { Toast.makeText(this, "Заполните поля", Toast.LENGTH_SHORT).show(); return }
-        if (!email.contains("@")) { Toast.makeText(this, "Некорректный email", Toast.LENGTH_SHORT).show(); return }
+        if (!email.contains("@") || !email.contains(".")) {
+            Toast.makeText(this, "❌ Некорректный email", Toast.LENGTH_SHORT).show()
+            return
+        }
         recipients.add(Recipient(UUID.randomUUID().toString(), name, email, dept))
         SharedPrefs.saveRecipients(this, recipients)
         etRecipientName.text.clear()
@@ -437,7 +487,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showAddVariableDialog() {
-        val nm = EditText(this).apply { hint = "Название переменной" }
+        val nm = EditText(this).apply { hint = "Название переменной *" }
         val tp = Spinner(this)
         val typeItems = VariableTypes.all.map { VariableTypes.displayNames[it] ?: it }
         val typeAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, typeItems)
@@ -494,7 +544,16 @@ class SettingsActivity : AppCompatActivity() {
         AlertDialog.Builder(this).setTitle("Добавить переменную").setView(ct)
             .setPositiveButton("Сохранить") { _, _ ->
                 val name = nm.text.toString().trim()
-                if (name.isEmpty()) { Toast.makeText(this, "Введите название", Toast.LENGTH_SHORT).show(); return@setPositiveButton }
+                if (name.isEmpty()) {
+                    Toast.makeText(this, "❌ Введите название переменной", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                // Проверка на дубликат
+                val existing = variables.find { it.name == name && it.dept == dept }
+                if (existing != null) {
+                    Toast.makeText(this, "❌ Переменная с таким именем уже существует", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 val type = VariableTypes.all[tp.selectedItemPosition]
                 val scope = when (scopeSpinner.selectedItemPosition) {
                     0 -> "common"
@@ -594,7 +653,10 @@ class SettingsActivity : AppCompatActivity() {
         AlertDialog.Builder(this).setTitle("Редактировать переменную").setView(ct)
             .setPositiveButton("Сохранить") { _, _ ->
                 val name = nm.text.toString().trim()
-                if (name.isEmpty()) { Toast.makeText(this, "Введите название", Toast.LENGTH_SHORT).show(); return@setPositiveButton }
+                if (name.isEmpty()) {
+                    Toast.makeText(this, "❌ Введите название переменной", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 val type = VariableTypes.all[tp.selectedItemPosition]
                 val scope = when (scopeSpinner.selectedItemPosition) {
                     0 -> "common"

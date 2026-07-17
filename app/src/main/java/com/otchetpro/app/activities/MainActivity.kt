@@ -14,7 +14,6 @@ import com.otchetpro.app.data.*
 import com.otchetpro.app.utils.DocxGenerator
 import com.otchetpro.app.utils.SharedPrefs
 import kotlinx.coroutines.*
-import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var filterAll: Button
     private lateinit var filterSaved: Button
     private lateinit var filterSent: Button
+    private lateinit var progressBar: ProgressBar
     
     private var dept = "БпЛА"
     private var currentFilter = "all"
@@ -57,6 +57,11 @@ class MainActivity : AppCompatActivity() {
         loadReports()
     }
 
+    override fun onResume() {
+        super.onResume()
+        loadReports()
+    }
+
     private fun initViews() {
         tvTitle = findViewById(R.id.tv_title)
         tvDeptInfo = findViewById(R.id.tv_dept_info)
@@ -69,6 +74,7 @@ class MainActivity : AppCompatActivity() {
         filterAll = findViewById(R.id.filter_all)
         filterSaved = findViewById(R.id.filter_saved)
         filterSent = findViewById(R.id.filter_sent)
+        progressBar = findViewById(R.id.progress_bar)
     }
 
     private fun updateUI() {
@@ -110,9 +116,6 @@ class MainActivity : AppCompatActivity() {
         loadReports()
     }
 
-    // ============================================================
-    // ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ ОТЧЕТА
-    // ============================================================
     private fun showDeleteConfirmDialog(report: Report) {
         AlertDialog.Builder(this)
             .setTitle("Удалить отчет?")
@@ -126,45 +129,62 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun deleteReport(report: Report) {
+        progressBar.visibility = View.VISIBLE
         CoroutineScope(Dispatchers.IO).launch {
-            val db = AppDatabase.getInstance(this@MainActivity)
-            db.reportDao().delete(report.id)
-            // Удаляем файл
-            val reportsDir = DocxGenerator.getReportsDir()
-            val file = File(reportsDir, "Отчет_${report.id}.docx")
-            if (file.exists()) file.delete()
-            withContext(Dispatchers.Main) {
-                loadReports()
-                Toast.makeText(this@MainActivity, "✅ Отчет удален", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun loadReports() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val all = AppDatabase.getInstance(this@MainActivity).reportDao().getByDept(dept)
-            val list = when (currentFilter) {
-                "saved" -> all.filter { it.status == "saved" }
-                "sent" -> all.filter { it.status == "sent" }
-                else -> all
-            }
-            withContext(Dispatchers.Main) {
-                if (list.isEmpty()) {
-                    tvEmpty.visibility = View.VISIBLE
-                    rv.visibility = View.GONE
-                    tvCount.text = "Всего: 0"
-                } else {
-                    tvEmpty.visibility = View.GONE
-                    rv.visibility = View.VISIBLE
-                    adapter.submitList(list)
-                    tvCount.text = "Всего: ${list.size}  (${all.size} всего)"
+            try {
+                val db = AppDatabase.getInstance(this@MainActivity)
+                db.reportDao().delete(report.id)
+                val reportsDir = DocxGenerator.getReportsDir()
+                val file = File(reportsDir, "Отчет_${report.id}.docx")
+                if (file.exists()) file.delete()
+                withContext(Dispatchers.Main) {
+                    loadReports()
+                    Toast.makeText(this@MainActivity, "✅ Отчет удален", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    Toast.makeText(this@MainActivity, "❌ Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        loadReports()
+    private fun loadReports() {
+        progressBar.visibility = View.VISIBLE
+        tvEmpty.visibility = View.GONE
+        rv.visibility = View.GONE
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val db = AppDatabase.getInstance(this@MainActivity)
+                val all = db.reportDao().getByDept(dept)
+                val list = when (currentFilter) {
+                    "saved" -> all.filter { it.status == "saved" }
+                    "sent" -> all.filter { it.status == "sent" }
+                    else -> all
+                }
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    if (list.isEmpty()) {
+                        tvEmpty.visibility = View.VISIBLE
+                        rv.visibility = View.GONE
+                        tvCount.text = "Всего: 0"
+                    } else {
+                        tvEmpty.visibility = View.GONE
+                        rv.visibility = View.VISIBLE
+                        adapter.submitList(list)
+                        tvCount.text = "Всего: ${list.size}  (${all.size} всего)"
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    tvEmpty.visibility = View.VISIBLE
+                    tvEmpty.text = "❌ Ошибка загрузки:\n${e.message}"
+                    Toast.makeText(this@MainActivity, "Ошибка загрузки: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 }

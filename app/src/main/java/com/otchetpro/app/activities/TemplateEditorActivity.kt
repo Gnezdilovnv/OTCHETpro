@@ -1,6 +1,10 @@
 package com.otchetpro.app.activities
 
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.BackgroundColorSpan
+import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -42,7 +46,6 @@ class TemplateEditorActivity : AppCompatActivity() {
         spinnerDept = findViewById(R.id.spinner_template_dept)
         llDeptSelect = findViewById(R.id.ll_dept_select)
 
-        // Настройка для корректного ввода текста
         etText.isFocusable = true
         etText.isFocusableInTouchMode = true
         etText.requestFocus()
@@ -87,7 +90,15 @@ class TemplateEditorActivity : AppCompatActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
+        // Подсветка синтаксиса при изменении текста
+        etText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) { highlightSyntax() }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+
         setupVariableButtons()
+        highlightSyntax()
 
         btnSave.setOnClickListener { saveTemplate() }
         btnCancel.setOnClickListener { finish() }
@@ -103,6 +114,42 @@ class TemplateEditorActivity : AppCompatActivity() {
         selectedDept = spinnerDept.selectedItem.toString()
     }
 
+    // ============================================================
+    // ПОДСВЕТКА СИНТАКСИСА
+    // ============================================================
+    private fun highlightSyntax() {
+        val text = etText.text.toString()
+        val spannable = SpannableString(text)
+        
+        // Ищем все переменные {{...}}
+        val pattern = Regex("\\{\\{[^}]+\\}\\}")
+        val matches = pattern.findAll(text)
+        
+        matches.forEach { match ->
+            val start = match.range.first
+            val end = match.range.last + 1
+            // Желтый фон
+            spannable.setSpan(
+                BackgroundColorSpan(0xFFFFFF00.toInt()),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            // Синий текст
+            spannable.setSpan(
+                ForegroundColorSpan(0xFF0B1A2F.toInt()),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+        
+        etText.setText(spannable, TextView.BufferType.SPANNABLE)
+        // Сохраняем позицию курсора
+        val selection = etText.selectionStart
+        etText.setSelection(selection.coerceAtMost(etText.text.length))
+    }
+
     private fun setupVariableButtons() {
         llVariableContainer.removeAllViews()
 
@@ -111,7 +158,6 @@ class TemplateEditorActivity : AppCompatActivity() {
             it.typeGlobal == "dept" && it.dept == selectedDept 
         }
 
-        // 1. Системные переменные
         val systemVars = listOf(
             "Подразделение" to "{{Подразделение}}",
             "Расчет" to "{{Расчет}}",
@@ -119,13 +165,11 @@ class TemplateEditorActivity : AppCompatActivity() {
         )
         addGroup("Системные переменные", systemVars.map { it.first }, true)
 
-        // 2. Общие переменные
         val commonVars = allVariables.filter { it.typeGlobal == "common" }
         if (commonVars.isNotEmpty()) {
             addGroup("Общие переменные (${commonVars.size})", commonVars.map { it.name }, false)
         }
 
-        // 3. Переменные подразделения
         if (!isCommon && deptVars.isNotEmpty()) {
             addGroup("Подразделение: $selectedDept (${deptVars.size})", deptVars.map { it.name }, false)
         }
@@ -179,6 +223,7 @@ class TemplateEditorActivity : AppCompatActivity() {
                                    text.substring(cursorPosition)
                     etText.setText(newText)
                     etText.setSelection(cursorPosition + placeholder.length)
+                    highlightSyntax()
                 }
             }
             val params = LinearLayout.LayoutParams(
@@ -217,9 +262,6 @@ class TemplateEditorActivity : AppCompatActivity() {
         val name = etName.text.toString().trim()
         val text = etText.text.toString().trim()
 
-        // ============================================================
-        // ВАЛИДАЦИЯ
-        // ============================================================
         var hasError = false
 
         if (name.isEmpty()) {
