@@ -61,12 +61,6 @@
 
     <EditText
         android:id="@+id/et_template_text"
-    <CheckBox
-        android:id="@+id/cb_template_common"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Общий шаблон (доступен всем отделам)"
-        android:layout_marginBottom="12dp" />
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -76,6 +70,13 @@
         android:fontFamily="monospace"
         android:minHeight="150dp"
         android:gravity="top"
+        android:layout_marginBottom="12dp" />
+
+    <CheckBox
+        android:id="@+id/cb_template_common"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Общий шаблон (доступен всем отделам)"
         android:layout_marginBottom="12dp" />
 
     <TextView
@@ -104,7 +105,7 @@
         android:id="@+id/btn_template_save"
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:background="#0b1a2f"
+        android:background="@drawable/btn_primary"
         android:text="Сохранить шаблон"
         android:textColor="#ffffff"
         android:textSize="15sp" />
