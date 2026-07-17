@@ -24,43 +24,10 @@
         android:textColor="#6f85a5"
         android:layout_marginBottom="24dp" />
 
-    <Button
-        android:id="@+id/btn_dept_bpla"
+    <LinearLayout
+        android:id="@+id/dept_list_container"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@drawable/btn_primary"
-        android:text="БпЛА"
-        android:textColor="#ffffff"
-        android:textSize="16sp"
-        android:layout_marginBottom="8dp" />
-
-    <Button
-        android:id="@+id/btn_dept_minomet"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@drawable/btn_primary"
-        android:text="Миномет"
-        android:textColor="#ffffff"
-        android:textSize="16sp"
-        android:layout_marginBottom="8dp" />
-
-    <Button
-        android:id="@+id/btn_dept_artillery"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@drawable/btn_primary"
-        android:text="Артиллерия"
-        android:textColor="#ffffff"
-        android:textSize="16sp"
-        android:layout_marginBottom="8dp" />
-
-    <Button
-        android:id="@+id/btn_dept_tanks"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@drawable/btn_primary"
-        android:text="Танки"
-        android:textColor="#ffffff"
-        android:textSize="16sp" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
 
 </LinearLayout>
