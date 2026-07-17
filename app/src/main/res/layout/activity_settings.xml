@@ -46,11 +46,11 @@
             android:textColor="#6f85a5"
             android:layout_marginBottom="16dp" />
 
-        <!-- Сменить подразделение -->
+        <!-- 1. Сменить подразделение -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="▼ Сменить подразделение"
+            android:text="▼ Отделы (подразделения)"
             android:textSize="14sp"
             android:textColor="#0b1a2f"
             android:textStyle="bold"
@@ -67,48 +67,15 @@
             android:layout_marginBottom="12dp"
             android:visibility="visible">
 
-            <Button
-                android:id="@+id/dept_bpla"
+            <LinearLayout
+                android:id="@+id/ll_depts_list"
                 android:layout_width="match_parent"
-                android:layout_height="36dp"
-                android:background="@drawable/btn_outline"
-                android:text="БпЛА (ПВР №2 «Пчела»)"
-                android:textColor="#0b1a2f"
-                android:textSize="12sp"
-                android:layout_marginBottom="4dp" />
-
-            <Button
-                android:id="@+id/dept_minomet"
-                android:layout_width="match_parent"
-                android:layout_height="36dp"
-                android:background="@drawable/btn_outline"
-                android:text="Миномет (расчет миномета «ТИГР»)"
-                android:textColor="#0b1a2f"
-                android:textSize="12sp"
-                android:layout_marginBottom="4dp" />
-
-            <Button
-                android:id="@+id/dept_artillery"
-                android:layout_width="match_parent"
-                android:layout_height="36dp"
-                android:background="@drawable/btn_outline"
-                android:text="Артиллерия (152-мм гаубица «Гиацинт»)"
-                android:textColor="#0b1a2f"
-                android:textSize="12sp"
-                android:layout_marginBottom="4dp" />
-
-            <Button
-                android:id="@+id/dept_tanks"
-                android:layout_width="match_parent"
-                android:layout_height="36dp"
-                android:background="@drawable/btn_outline"
-                android:text="Танки (танковый взвод Т-72)"
-                android:textColor="#0b1a2f"
-                android:textSize="12sp" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
 
         </LinearLayout>
 
-        <!-- Подподразделения -->
+        <!-- 2. Подподразделения -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -131,11 +98,6 @@
 
             <LinearLayout
                 android:id="@+id/ll_subdepts_list"
-        <LinearLayout
-            android:id="@+id/ll_depts_list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
@@ -172,7 +134,7 @@
 
         </LinearLayout>
 
-        <!-- Редактор шаблонов -->
+        <!-- 3. Редактор шаблонов -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -211,7 +173,7 @@
 
         </LinearLayout>
 
-        <!-- Переменные -->
+        <!-- 4. Переменные -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -250,7 +212,7 @@
 
         </LinearLayout>
 
-        <!-- Адресная книга -->
+        <!-- 5. Адресная книга -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -320,7 +282,7 @@
 
         </LinearLayout>
 
-        <!-- Экспорт/Импорт -->
+        <!-- 6. Экспорт/Импорт -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
