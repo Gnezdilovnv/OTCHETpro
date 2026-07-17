@@ -35,7 +35,6 @@ object SharedPrefs {
         return try { gson.fromJson(j, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { emptyList() }
     }
     fun saveSubDepts(c: Context, l: List<String>) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("subs", gson.toJson(l)).apply() }
-}
 
     fun saveDeptUnit(c: Context, dept: String, unit: String) {
         c.getSharedPreferences(P, Context.MODE_PRIVATE)
@@ -48,3 +47,4 @@ object SharedPrefs {
         return c.getSharedPreferences(P, Context.MODE_PRIVATE)
             .getString("dept_unit_$dept", null)
     }
+}

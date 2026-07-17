@@ -2,14 +2,11 @@ package com.otchetpro.app.activities
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.otchetpro.app.R
@@ -69,14 +66,15 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_close_settings).setOnClickListener { finish() }
         findViewById<Button>(R.id.btn_subdept_add).setOnClickListener { addSubDept() }
         findViewById<Button>(R.id.btn_recipient_add).setOnClickListener { addRecipient() }
-        findViewById<Button>(R.id.btn_template_add).setOnClickListener { openTemplateEditor() }
+        findViewById<Button>(R.id.btn_template_add).setOnClickListener { 
+            startActivity(Intent(this, TemplateEditorActivity::class.java))
+        }
         findViewById<Button>(R.id.btn_var_add).setOnClickListener { addVariable() }
         
         btnExport.setOnClickListener { exportSettings() }
         btnImport.setOnClickListener { importSettings() }
         btnTemplateDownload.setOnClickListener { downloadTemplate() }
 
-        // Аккордеоны
         setupAccordion(R.id.accordion_dept_header, R.id.accordion_dept_body)
         setupAccordion(R.id.accordion_subdepts_header, R.id.accordion_subdepts_body)
         setupAccordion(R.id.accordion_templates_header, R.id.accordion_templates_body)
@@ -84,7 +82,6 @@ class SettingsActivity : AppCompatActivity() {
         setupAccordion(R.id.accordion_recipients_header, R.id.accordion_recipients_body)
         setupAccordion(R.id.accordion_export_header, R.id.accordion_export_body)
 
-        // Кнопки смены отдела — РЕДАКТИРУЕМЫЕ
         findViewById<Button>(R.id.dept_bpla).setOnClickListener { 
             showEditDeptDialog("БпЛА", "ПВР №2 «Пчела»")
         }
@@ -112,7 +109,6 @@ class SettingsActivity : AppCompatActivity() {
             .setPositiveButton("Сохранить") { _, _ ->
                 val newName = input.text.toString().trim()
                 if (newName.isNotEmpty()) {
-                    // Сохраняем в SharedPrefs
                     SharedPrefs.saveDeptUnit(this, deptName, newName)
                     loadData()
                     Toast.makeText(this, "✅ Обновлено: $newName", Toast.LENGTH_SHORT).show()
@@ -136,12 +132,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun changeDept(newDept: String) {
-        SharedPrefs.saveDept(this, newDept)
-        dept = newDept
-        loadData()
-    }
-
     private fun loadData() {
         dept = SharedPrefs.getDept(this)
         tvDeptInfo.text = "Настройки для отдела: $dept"
@@ -151,7 +141,7 @@ class SettingsActivity : AppCompatActivity() {
         variables = SharedPrefs.getVariables(this).filter { it.dept == dept || it.typeGlobal == "common" }.toMutableList()
         recipients = SharedPrefs.getRecipients(this).toMutableList()
 
-        // Подподразделения — редактируемые
+        // Подподразделения
         llSubDepts.removeAllViews()
         subDepts.forEachIndexed { i, name ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
@@ -193,7 +183,7 @@ class SettingsActivity : AppCompatActivity() {
             llSubDepts.addView(row)
         }
 
-        // Шаблоны — редактируемые
+        // Шаблоны
         llTemplates.removeAllViews()
         templates.forEachIndexed { i, t ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 8, 0, 8) }
@@ -208,7 +198,13 @@ class SettingsActivity : AppCompatActivity() {
             val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             val editBtn = Button(this).apply { 
                 text = "✎ Редактировать"
-                setOnClickListener { openTemplateEditor(t) }
+                setOnClickListener { 
+                    val intent = Intent(this@SettingsActivity, TemplateEditorActivity::class.java)
+                    intent.putExtra("template_id", t.id)
+                    intent.putExtra("template_name", t.name)
+                    intent.putExtra("template_text", t.text)
+                    startActivity(intent)
+                }
             }
             val deleteBtn = Button(this).apply { 
                 text = "✕ Удалить"
@@ -313,16 +309,6 @@ class SettingsActivity : AppCompatActivity() {
         Toast.makeText(this, "✅ Добавлен", Toast.LENGTH_SHORT).show()
     }
 
-    private fun openTemplateEditor(template: Template? = null) {
-        val intent = Intent(this, TemplateEditorActivity::class.java)
-        template?.let { 
-            intent.putExtra("template_id", it.id)
-            intent.putExtra("template_name", it.name)
-            intent.putExtra("template_text", it.text)
-        }
-        startActivity(intent)
-    }
-
     private fun addVariable() {
         val nm = EditText(this).apply { hint = "Название" }
         val tp = Spinner(this)
@@ -331,18 +317,51 @@ class SettingsActivity : AppCompatActivity() {
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         tp.adapter = spinnerAdapter
         
+        val optionsHint = EditText(this).apply { 
+            hint = "Для списка: варианты через запятую"
+            visibility = View.GONE
+        }
+        
+        tp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val type = VariableTypes.all[position]
+                optionsHint.visibility = if (type == VariableTypes.SELECT || type == VariableTypes.MULTISELECT) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+        
         val ck = CheckBox(this).apply { text = "Обязательное" }
         val cm = CheckBox(this).apply { text = "Общая" }
-        val ct = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(nm); addView(tp); addView(ck); addView(cm) }
+        val ct = LinearLayout(this).apply { 
+            orientation = LinearLayout.VERTICAL
+            addView(nm)
+            addView(tp)
+            addView(optionsHint)
+            addView(ck)
+            addView(cm)
+        }
+        
         AlertDialog.Builder(this).setTitle("Добавить переменную").setView(ct)
             .setPositiveButton("OK") { _, _ ->
                 val name = nm.text.toString().trim()
                 if (name.isEmpty()) { Toast.makeText(this, "Введите название", Toast.LENGTH_SHORT).show(); return@setPositiveButton }
                 val type = VariableTypes.all[tp.selectedItemPosition]
+                val options = if (type == VariableTypes.SELECT || type == VariableTypes.MULTISELECT) {
+                    optionsHint.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                } else emptyList()
+                
                 variables.add(Variable(
-                    UUID.randomUUID().toString(), name, type, ck.isChecked,
-                    if (cm.isChecked) "common" else "own",
-                    if (cm.isChecked) "" else dept
+                    id = UUID.randomUUID().toString(),
+                    name = name,
+                    type = type,
+                    required = ck.isChecked,
+                    typeGlobal = if (cm.isChecked) "common" else "own",
+                    dept = if (cm.isChecked) "" else dept,
+                    options = options
                 ))
                 SharedPrefs.saveVariables(this, variables)
                 loadData()
@@ -404,7 +423,6 @@ class SettingsActivity : AppCompatActivity() {
                         val json = FileReader(file).readText()
                         val data = Gson().fromJson(json, Map::class.java)
                         
-                        // Проверяем отдел
                         val importedDept = data["dept"] as? String
                         if (importedDept != null && importedDept != dept) {
                             AlertDialog.Builder(this)
@@ -427,11 +445,9 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun doImport(data: Map<*, *>) {
         try {
-            val gson = Gson()
-            
-            @Suppress("UNCHECKED_CAST")
             val importedSubDepts = data["subDepts"] as? List<String>
             if (importedSubDepts != null) {
                 subDepts.clear()
@@ -439,7 +455,6 @@ class SettingsActivity : AppCompatActivity() {
                 SharedPrefs.saveSubDepts(this, subDepts)
             }
 
-            @Suppress("UNCHECKED_CAST")
             val importedTemplates = data["templates"] as? List<Map<String, Any>>
             if (importedTemplates != null) {
                 val newTemplates = importedTemplates.map { 
@@ -455,7 +470,6 @@ class SettingsActivity : AppCompatActivity() {
                 SharedPrefs.saveTemplates(this, templates)
             }
 
-            @Suppress("UNCHECKED_CAST")
             val importedVariables = data["variables"] as? List<Map<String, Any>>
             if (importedVariables != null) {
                 val newVariables = importedVariables.map {
@@ -465,14 +479,14 @@ class SettingsActivity : AppCompatActivity() {
                         type = it["type"] as? String ?: "text",
                         required = it["required"] as? Boolean ?: false,
                         typeGlobal = "own",
-                        dept = dept
+                        dept = dept,
+                        options = (it["options"] as? List<String>) ?: emptyList()
                     )
                 }
                 variables.addAll(newVariables)
                 SharedPrefs.saveVariables(this, variables)
             }
 
-            @Suppress("UNCHECKED_CAST")
             val importedRecipients = data["recipients"] as? List<Map<String, String>>
             if (importedRecipients != null) {
                 val newRecipients = importedRecipients.map {
@@ -516,7 +530,8 @@ class SettingsActivity : AppCompatActivity() {
                     mapOf(
                         "name" to "Название переменной",
                         "type" to "text",
-                        "required" to true
+                        "required" to true,
+                        "options" to listOf("Вариант1", "Вариант2")
                     )
                 ),
                 "recipients" to listOf(

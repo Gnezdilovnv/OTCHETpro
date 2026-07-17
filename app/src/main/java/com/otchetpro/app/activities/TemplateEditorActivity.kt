@@ -20,7 +20,7 @@ class TemplateEditorActivity : AppCompatActivity() {
     private lateinit var etText: EditText
     private lateinit var btnSave: Button
     private lateinit var btnCancel: Button
-    private lateinit var rvVariables: RecyclerView
+    private lateinit var llVariableButtons: LinearLayout
     
     private var templateId: String? = null
     private var isEditMode = false
@@ -36,7 +36,7 @@ class TemplateEditorActivity : AppCompatActivity() {
         etText = findViewById(R.id.et_template_text)
         btnSave = findViewById(R.id.btn_template_save)
         btnCancel = findViewById(R.id.btn_template_cancel)
-        rvVariables = findViewById(R.id.rv_template_variables)
+        llVariableButtons = findViewById(R.id.ll_variable_buttons)
 
         dept = SharedPrefs.getDept(this)
         allVariables = SharedPrefs.getVariables(this).filter { it.dept == dept || it.typeGlobal == "common" }
@@ -51,30 +51,19 @@ class TemplateEditorActivity : AppCompatActivity() {
             tvTitle.text = "Новый шаблон"
         }
 
-        // Кнопки-вставки переменных
         setupVariableButtons()
 
         btnSave.setOnClickListener { saveTemplate() }
         btnCancel.setOnClickListener { finish() }
-
-        // Подсветка синтаксиса
-        etText.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) {}
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                highlightSyntax()
-            }
-        })
     }
 
     private fun setupVariableButtons() {
-        val layout = findViewById<LinearLayout>(R.id.ll_variable_buttons)
-        layout.removeAllViews()
+        llVariableButtons.removeAllViews()
 
         allVariables.forEach { variable ->
             val btn = Button(this).apply {
                 text = variable.name
-                setPadding(8, 8, 8, 8)
+                setPadding(16, 8, 16, 8)
                 setOnClickListener {
                     val cursorPosition = etText.selectionStart
                     val text = etText.text.toString()
@@ -88,16 +77,12 @@ class TemplateEditorActivity : AppCompatActivity() {
             val params = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { marginEnd = 8; marginBottom = 8 }
+            ).apply { 
+                setMargins(0, 0, 8, 8)
+            }
             btn.layoutParams = params
-            layout.addView(btn)
+            llVariableButtons.addView(btn)
         }
-    }
-
-    private fun highlightSyntax() {
-        // Простая подсветка — можно расширить
-        val text = etText.text.toString()
-        // В реальном приложении здесь можно использовать SpannableString
     }
 
     private fun saveTemplate() {
