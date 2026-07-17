@@ -61,6 +61,12 @@
 
     <EditText
         android:id="@+id/et_template_text"
+    <CheckBox
+        android:id="@+id/cb_template_common"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Общий шаблон (доступен всем отделам)"
+        android:layout_marginBottom="12dp" />
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"

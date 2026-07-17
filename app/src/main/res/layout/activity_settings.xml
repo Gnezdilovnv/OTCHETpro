@@ -131,6 +131,11 @@
 
             <LinearLayout
                 android:id="@+id/ll_subdepts_list"
+        <LinearLayout
+            android:id="@+id/ll_depts_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />

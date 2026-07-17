@@ -11,12 +11,13 @@ import com.otchetpro.app.R
 import com.otchetpro.app.data.Report
 
 class ReportAdapter(
-    private val onItemClick: (Report) -> Unit
+    private val onItemClick: (Report) -> Unit,
+    private val onLongClick: (Report) -> Unit = {}
 ) : ListAdapter<Report, ReportAdapter.ReportViewHolder>(DiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ReportViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_report, parent, false)
-        return ReportViewHolder(view, onItemClick)
+        return ReportViewHolder(view, onItemClick, onLongClick)
     }
 
     override fun onBindViewHolder(holder: ReportViewHolder, position: Int) {
@@ -25,7 +26,8 @@ class ReportAdapter(
 
     class ReportViewHolder(
         itemView: View,
-        private val onItemClick: (Report) -> Unit
+        private val onItemClick: (Report) -> Unit,
+        private val onLongClick: (Report) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
 
         private val tvTemplate: TextView = itemView.findViewById(R.id.tv_template)
@@ -47,6 +49,10 @@ class ReportAdapter(
             }
             
             itemView.setOnClickListener { onItemClick(report) }
+            itemView.setOnLongClickListener {
+                onLongClick(report)
+                true
+            }
         }
     }
 

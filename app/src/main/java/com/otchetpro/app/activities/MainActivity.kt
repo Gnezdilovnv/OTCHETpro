@@ -130,3 +130,26 @@ class MainActivity : AppCompatActivity() {
         loadReports()
     }
 }
+
+    private fun setupLongClick() {
+        adapter.setLongClickListener { report ->
+            AlertDialog.Builder(this)
+                .setTitle("Удалить отчет")
+                .setMessage("Удалить отчет \"${report.templateName}\"?")
+                .setPositiveButton("Удалить") { _, _ ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val db = AppDatabase.getInstance(this@MainActivity)
+                        db.reportDao().delete(report.id)
+                        // Удаляем файл
+                        val file = File(DocxGenerator.getReportsDir(), "Отчет_${report.id}.docx")
+                        if (file.exists()) file.delete()
+                        withContext(Dispatchers.Main) {
+                            loadReports()
+                            Toast.makeText(this@MainActivity, "✅ Отчет удален", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
+        }
+    }

@@ -1,13 +1,9 @@
 package com.otchetpro.app.activities
 
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.otchetpro.app.R
 import com.otchetpro.app.data.*
 import com.otchetpro.app.utils.SharedPrefs
@@ -21,11 +17,13 @@ class TemplateEditorActivity : AppCompatActivity() {
     private lateinit var btnSave: Button
     private lateinit var btnCancel: Button
     private lateinit var llVariableButtons: LinearLayout
+    private lateinit var cbCommon: CheckBox
     
     private var templateId: String? = null
     private var isEditMode = false
     private var dept = ""
     private var allVariables = listOf<Variable>()
+    private var templateType = "own"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +35,7 @@ class TemplateEditorActivity : AppCompatActivity() {
         btnSave = findViewById(R.id.btn_template_save)
         btnCancel = findViewById(R.id.btn_template_cancel)
         llVariableButtons = findViewById(R.id.ll_variable_buttons)
+        cbCommon = findViewById(R.id.cb_template_common)
 
         dept = SharedPrefs.getDept(this)
         allVariables = SharedPrefs.getVariables(this).filter { it.dept == dept || it.typeGlobal == "common" }
@@ -47,8 +46,11 @@ class TemplateEditorActivity : AppCompatActivity() {
             tvTitle.text = "Редактировать шаблон"
             etName.setText(intent.getStringExtra("template_name") ?: "")
             etText.setText(intent.getStringExtra("template_text") ?: "")
+            templateType = intent.getStringExtra("template_type") ?: "own"
+            cbCommon.isChecked = templateType == "common"
         } else {
             tvTitle.text = "Новый шаблон"
+            cbCommon.isChecked = false
         }
 
         setupVariableButtons()
@@ -98,20 +100,26 @@ class TemplateEditorActivity : AppCompatActivity() {
             return
         }
 
+        val type = if (cbCommon.isChecked) "common" else "own"
         val templates = SharedPrefs.getTemplates(this).toMutableList()
         
         if (isEditMode && templateId != null) {
             val index = templates.indexOfFirst { it.id == templateId }
             if (index != -1) {
-                templates[index] = templates[index].copy(name = name, text = text)
+                templates[index] = templates[index].copy(
+                    name = name,
+                    text = text,
+                    type = type,
+                    dept = if (type == "common") "" else dept
+                )
             }
         } else {
             templates.add(Template(
                 id = UUID.randomUUID().toString(),
                 name = name,
                 text = text,
-                type = "own",
-                dept = dept
+                type = type,
+                dept = if (type == "common") "" else dept
             ))
         }
 
