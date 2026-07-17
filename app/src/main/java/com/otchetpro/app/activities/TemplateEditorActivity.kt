@@ -19,7 +19,6 @@ class TemplateEditorActivity : AppCompatActivity() {
     private lateinit var llVariableContainer: LinearLayout
     private lateinit var cbCommon: CheckBox
     private lateinit var spinnerDept: Spinner
-    private lateinit var spinnerUnit: Spinner
     private lateinit var llDeptSelect: LinearLayout
     
     private var templateId: String? = null
@@ -41,16 +40,13 @@ class TemplateEditorActivity : AppCompatActivity() {
         llVariableContainer = findViewById(R.id.ll_variable_buttons_container)
         cbCommon = findViewById(R.id.cb_template_common)
         spinnerDept = findViewById(R.id.spinner_template_dept)
-        spinnerUnit = findViewById(R.id.spinner_template_unit)
         llDeptSelect = findViewById(R.id.ll_dept_select)
 
         dept = SharedPrefs.getDept(this)
         allDepts = SharedPrefs.getDepts(this)
         allVariables = SharedPrefs.getVariables(this)
 
-        // Настройка спиннеров для подразделения и расчета
         setupDeptSpinner()
-        setupUnitSpinner()
 
         templateId = intent.getStringExtra("template_id")
         if (templateId != null) {
@@ -69,13 +65,21 @@ class TemplateEditorActivity : AppCompatActivity() {
             llDeptSelect.visibility = View.VISIBLE
         }
 
-        // При смене чекбокса "Общий" — показываем/скрываем выбор подразделения
         cbCommon.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 llDeptSelect.visibility = View.GONE
             } else {
                 llDeptSelect.visibility = View.VISIBLE
             }
+            setupVariableButtons()
+        }
+
+        spinnerDept.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                selectedDept = parent?.getItemAtPosition(position).toString() ?: dept
+                setupVariableButtons()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
         setupVariableButtons()
@@ -91,46 +95,24 @@ class TemplateEditorActivity : AppCompatActivity() {
         
         val currentIndex = allDepts.indexOf(dept)
         if (currentIndex >= 0) spinnerDept.setSelection(currentIndex)
-        
-        spinnerDept.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                selectedDept = parent?.getItemAtPosition(position).toString() ?: dept
-                setupUnitSpinner()
-                setupVariableButtons()
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
-    }
-
-    private fun setupUnitSpinner() {
-        val unitVars = allVariables.filter { it.name == "Расчет" && it.dept == selectedDept }
-        val unitOptions = unitVars.flatMap { it.options }
-        val items = if (unitOptions.isEmpty()) listOf("Нет расчетов") else unitOptions
-        
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, items)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerUnit.adapter = adapter
+        selectedDept = spinnerDept.selectedItem.toString()
     }
 
     private fun setupVariableButtons() {
         llVariableContainer.removeAllViews()
 
-        // Определяем, какие переменные показывать
         val isCommon = cbCommon.isChecked
         val deptVars = allVariables.filter { 
             it.typeGlobal == "dept" && it.dept == selectedDept 
         }
-        val unitVars = allVariables.filter { 
-            it.typeGlobal == "unit" && it.dept == selectedDept 
-        }
-        
+
         // 1. Системные переменные (всегда)
         val systemVars = listOf(
             "Подразделение" to "{{Подразделение}}",
             "Расчет" to "{{Расчет}}",
             "Соисполнители" to "{{Соисполнители}}"
         )
-        addGroup("Системные переменные", systemVars.map { it.first }, false)
+        addGroup("Системные переменные", systemVars.map { it.first }, true)
 
         // 2. Общие переменные (всегда)
         val commonVars = allVariables.filter { it.typeGlobal == "common" }
@@ -142,21 +124,16 @@ class TemplateEditorActivity : AppCompatActivity() {
         if (!isCommon && deptVars.isNotEmpty()) {
             addGroup("Подразделение: $selectedDept (${deptVars.size})", deptVars.map { it.name }, false)
         }
-
-        // 4. Переменные расчета (только если не общий шаблон)
-        if (!isCommon && unitVars.isNotEmpty()) {
-            val unitName = spinnerUnit.selectedItem.toString()
-            addGroup("Расчет: $unitName (${unitVars.size})", unitVars.map { it.name }, false)
-        }
     }
 
     private fun addGroup(title: String, items: List<String>, isOpen: Boolean) {
+        if (items.isEmpty()) return
+
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 4, 0, 4)
         }
 
-        // Заголовок
         val header = TextView(this).apply {
             text = if (isOpen) "▼ $title" else "▶ $title"
             textSize = 13f
@@ -169,7 +146,6 @@ class TemplateEditorActivity : AppCompatActivity() {
             tag = if (isOpen) "open" else "closed"
         }
 
-        // Контейнер для кнопок
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             visibility = if (isOpen) View.VISIBLE else View.GONE
@@ -178,11 +154,8 @@ class TemplateEditorActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            isFocusable = true
-            isFocusableInTouchMode = true
         }
 
-        // Добавляем кнопки переменных
         items.forEach { name ->
             val btn = Button(this).apply {
                 text = name
@@ -211,7 +184,6 @@ class TemplateEditorActivity : AppCompatActivity() {
             content.addView(btn)
         }
 
-        // Горизонтальный скролл
         val scrollView = HorizontalScrollView(this).apply {
             addView(content)
             visibility = if (isOpen) View.VISIBLE else View.GONE
@@ -220,7 +192,6 @@ class TemplateEditorActivity : AppCompatActivity() {
         container.addView(header)
         container.addView(scrollView)
 
-        // Обработчик раскрытия/закрытия
         header.setOnClickListener {
             val isOpenNow = header.tag == "open"
             if (isOpenNow) {
