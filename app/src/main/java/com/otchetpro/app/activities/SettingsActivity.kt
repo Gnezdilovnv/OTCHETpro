@@ -854,3 +854,18 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 }
+
+    // Сортировка списков
+    private fun sortLists() {
+        allDepts.sort()
+        subDepts.sort()
+        templates.sortBy { it.name }
+        variables.sortBy { it.name }
+        recipients.sortBy { it.name }
+    }
+
+    // Поиск по спискам
+    private fun filterList(list: List<String>, query: String): List<String> {
+        if (query.isEmpty()) return list
+        return list.filter { it.contains(query, ignoreCase = true) }
+    }

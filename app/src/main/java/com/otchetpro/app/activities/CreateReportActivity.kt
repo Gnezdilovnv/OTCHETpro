@@ -519,3 +519,16 @@ class CreateReportActivity : AppCompatActivity() {
         override fun getItemCount(): Int = items.size
     }
 }
+
+    // Валидация числового поля
+    private fun validateNumberField(editText: EditText): Boolean {
+        val text = editText.text.toString()
+        if (text.isEmpty()) return true // Пустое поле допустимо (если не обязательное)
+        return try {
+            text.toDouble()
+            true
+        } catch (e: NumberFormatException) {
+            editText.error = "Введите число"
+            false
+        }
+    }

@@ -33,6 +33,8 @@ class MainActivity : AppCompatActivity() {
     private var dept = "БпЛА"
     private var currentFilter = "all"
     private lateinit var adapter: ReportAdapter
+    private var cachedReports: List<Report>? = null
+    private var lastDept = ""
 
     override fun onCreate(s: Bundle?) {
         super.onCreate(s)
@@ -59,7 +61,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        loadReports()
+        val newDept = SharedPrefs.getDept(this)
+        if (newDept != dept) {
+            dept = newDept
+            updateUI()
+            cachedReports = null
+            loadReports()
+        } else {
+            // Проверяем, изменились ли данные в БД
+            loadReports(useCache = false)
+        }
     }
 
     private fun initViews() {
@@ -113,7 +124,7 @@ class MainActivity : AppCompatActivity() {
         filterAll.setTextColor(if (filter == "all") 0xFFFFFFFF.toInt() else 0xFF0B1A2F.toInt())
         filterSaved.setTextColor(if (filter == "saved") 0xFFFFFFFF.toInt() else 0xFF0B1A2F.toInt())
         filterSent.setTextColor(if (filter == "sent") 0xFFFFFFFF.toInt() else 0xFF0B1A2F.toInt())
-        loadReports()
+        loadReports(useCache = false)
     }
 
     private fun showDeleteConfirmDialog(report: Report) {
@@ -137,8 +148,10 @@ class MainActivity : AppCompatActivity() {
                 val reportsDir = DocxGenerator.getReportsDir()
                 val file = File(reportsDir, "Отчет_${report.id}.docx")
                 if (file.exists()) file.delete()
+                // Очищаем кэш
+                cachedReports = null
                 withContext(Dispatchers.Main) {
-                    loadReports()
+                    loadReports(useCache = false)
                     Toast.makeText(this@MainActivity, "✅ Отчет удален", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
@@ -150,7 +163,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadReports() {
+    private fun loadReports(useCache: Boolean = true) {
+        // Проверяем кэш
+        if (useCache && cachedReports != null && lastDept == dept) {
+            applyReports(cachedReports!!)
+            return
+        }
+
         progressBar.visibility = View.VISIBLE
         tvEmpty.visibility = View.GONE
         rv.visibility = View.GONE
@@ -159,23 +178,11 @@ class MainActivity : AppCompatActivity() {
             try {
                 val db = AppDatabase.getInstance(this@MainActivity)
                 val all = db.reportDao().getByDept(dept)
-                val list = when (currentFilter) {
-                    "saved" -> all.filter { it.status == "saved" }
-                    "sent" -> all.filter { it.status == "sent" }
-                    else -> all
-                }
+                // Сохраняем в кэш
+                cachedReports = all
+                lastDept = dept
                 withContext(Dispatchers.Main) {
-                    progressBar.visibility = View.GONE
-                    if (list.isEmpty()) {
-                        tvEmpty.visibility = View.VISIBLE
-                        rv.visibility = View.GONE
-                        tvCount.text = "Всего: 0"
-                    } else {
-                        tvEmpty.visibility = View.GONE
-                        rv.visibility = View.VISIBLE
-                        adapter.submitList(list)
-                        tvCount.text = "Всего: ${list.size}  (${all.size} всего)"
-                    }
+                    applyReports(all)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -185,6 +192,26 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this@MainActivity, "Ошибка загрузки: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
+        }
+    }
+
+    private fun applyReports(all: List<Report>) {
+        progressBar.visibility = View.GONE
+        val list = when (currentFilter) {
+            "saved" -> all.filter { it.status == "saved" }
+            "sent" -> all.filter { it.status == "sent" }
+            else -> all
+        }
+        
+        if (list.isEmpty()) {
+            tvEmpty.visibility = View.VISIBLE
+            rv.visibility = View.GONE
+            tvCount.text = "Всего: 0"
+        } else {
+            tvEmpty.visibility = View.GONE
+            rv.visibility = View.VISIBLE
+            adapter.submitList(list)
+            tvCount.text = "Всего: ${list.size}  (${all.size} всего)"
         }
     }
 }

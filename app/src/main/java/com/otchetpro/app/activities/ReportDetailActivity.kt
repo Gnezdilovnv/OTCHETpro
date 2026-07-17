@@ -43,7 +43,7 @@ class ReportDetailActivity : AppCompatActivity() {
         id = intent.getLongExtra("id", 0)
 
         btnClose.setOnClickListener { finish() }
-        btnSend.setOnClickListener { sendEmail() }
+        btnSend.setOnClickListener { showEmailPreview() }
         btnShare.setOnClickListener {
             val i = Intent(Intent.ACTION_SEND)
             i.type = "text/plain"
@@ -132,17 +132,88 @@ class ReportDetailActivity : AppCompatActivity() {
     }
 
     // ============================================================
-    // ОТПРАВКА НА ПОЧТУ С ПРИКРЕПЛЕНИЕМ ФАЙЛА
+    // ПРЕДПРОСМОТР ПИСЬМА
     // ============================================================
-    private fun sendEmail() {
-        // Проверяем, что отчет сохранен
-        if (report == null) {
-            Toast.makeText(this, "Отчет не найден", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+    private fun showEmailPreview() {
+        val r = report ?: return
         val recips = SharedPrefs.getRecipients(this)
         
+        // Формируем текст письма
+        val subject = "Боевое донесение — ${r.templateName}"
+        val body = """
+            Уважаемый(ая) ${if (recips.isNotEmpty()) recips[0].name else "получатель"}!
+
+            Направляю боевое донесение.
+
+            -- 
+            Сгенерировано автоматически в OTCHETpro
+        """.trimIndent()
+        
+        // Показываем предпросмотр
+        val previewView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(16, 16, 16, 16)
+        }
+        
+        val tvSubject = TextView(this).apply {
+            text = "Тема: $subject"
+            textSize = 14f
+            setTextColor(0xFF0B1A2F.toInt())
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        previewView.addView(tvSubject)
+        
+        val tvBody = TextView(this).apply {
+            text = body
+            textSize = 13f
+            setTextColor(0xFF0B1A2F.toInt())
+            setPadding(0, 8, 0, 0)
+        }
+        previewView.addView(tvBody)
+        
+        val tvAttachment = TextView(this).apply {
+            text = if (filePath != null) "📎 Вложение: ${File(filePath).name}" else "⚠️ Файл не найден"
+            textSize = 12f
+            setTextColor(if (filePath != null) 0xFF0F7B3A.toInt() else 0xFFB33A3A.toInt())
+            setPadding(0, 8, 0, 0)
+        }
+        previewView.addView(tvAttachment)
+        
+        val tvRecipients = TextView(this).apply {
+            text = if (recips.isNotEmpty()) {
+                "📨 Получатели: " + recips.joinToString(", ") { it.name }
+            } else {
+                "⚠️ Нет получателей. Нажмите 'Выбрать' для добавления."
+            }
+            textSize = 12f
+            setTextColor(if (recips.isNotEmpty()) 0xFF0B1A2F.toInt() else 0xFFB33A3A.toInt())
+            setPadding(0, 8, 0, 0)
+        }
+        previewView.addView(tvRecipients)
+        
+        AlertDialog.Builder(this)
+            .setTitle("📨 Предпросмотр письма")
+            .setView(previewView)
+            .setPositiveButton("Отправить") { _, _ ->
+                if (recips.isEmpty()) {
+                    showManualEmailDialog()
+                } else {
+                    sendEmailTo(recips[0].email, recips[0].name)
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .setNeutralButton("Выбрать получателя") { _, _ ->
+                if (recips.isEmpty()) {
+                    showManualEmailDialog()
+                } else {
+                    showRecipientSelectionDialog()
+                }
+            }
+            .show()
+    }
+
+    private fun showRecipientSelectionDialog() {
+        val recips = SharedPrefs.getRecipients(this)
         if (recips.isEmpty()) {
             showManualEmailDialog()
             return
@@ -153,7 +224,7 @@ class ReportDetailActivity : AppCompatActivity() {
             .setTitle("Выберите получателя")
             .setItems(names) { _, i ->
                 val r = recips[i]
-                sendEmailWithAttachment(r.email, r.name)
+                sendEmailTo(r.email, r.name)
             }
             .setPositiveButton("Ввести вручную") { _, _ -> showManualEmailDialog() }
             .setNegativeButton("Отмена", null)
@@ -178,7 +249,12 @@ class ReportDetailActivity : AppCompatActivity() {
                 val name = nameInput.text.toString().trim()
                 val email = emailInput.text.toString().trim()
                 if (name.isNotEmpty() && email.isNotEmpty() && email.contains("@")) {
-                    sendEmailWithAttachment(email, name)
+                    // Сохраняем в адресную книгу
+                    val recipients = SharedPrefs.getRecipients(this).toMutableList()
+                    recipients.add(Recipient(UUID.randomUUID().toString(), name, email, SharedPrefs.getDept(this)))
+                    SharedPrefs.saveRecipients(this, recipients)
+                    
+                    sendEmailTo(email, name)
                 } else {
                     Toast.makeText(this, "Введите корректные данные", Toast.LENGTH_SHORT).show()
                 }
@@ -187,10 +263,9 @@ class ReportDetailActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun sendEmailWithAttachment(email: String, name: String) {
+    private fun sendEmailTo(email: String, name: String) {
         val r = report ?: return
         
-        // Ищем файл
         if (filePath == null) {
             findFile(r.id)
         }
@@ -210,7 +285,6 @@ class ReportDetailActivity : AppCompatActivity() {
         intent.putExtra(Intent.EXTRA_SUBJECT, subject)
         intent.putExtra(Intent.EXTRA_TEXT, body)
         
-        // Прикрепляем файл, если он есть
         if (filePath != null) {
             val file = File(filePath)
             if (file.exists()) {
@@ -222,19 +296,16 @@ class ReportDetailActivity : AppCompatActivity() {
                 intent.putExtra(Intent.EXTRA_STREAM, uri)
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             } else {
-                // Файл не найден, отправляем только текст
                 intent.type = "text/plain"
                 intent.putExtra(Intent.EXTRA_TEXT, body + "\n\n" + r.text)
             }
         } else {
-            // Файл не найден, отправляем только текст
             intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_TEXT, body + "\n\n" + r.text)
         }
         
         startActivity(Intent.createChooser(intent, "Отправить письмо"))
 
-        // Обновляем статус в БД
         CoroutineScope(Dispatchers.IO).launch {
             val db = AppDatabase.getInstance(this@ReportDetailActivity)
             val current = db.reportDao().getById(id)
