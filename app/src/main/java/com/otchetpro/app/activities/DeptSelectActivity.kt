@@ -3,6 +3,7 @@ package com.otchetpro.app.activities
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.otchetpro.app.R
 import com.otchetpro.app.utils.SharedPrefs
@@ -13,15 +14,36 @@ class DeptSelectActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dept_select)
 
-        findViewById<Button>(R.id.btn_dept_bpla).setOnClickListener { selectDept("БпЛА") }
-        findViewById<Button>(R.id.btn_dept_minomet).setOnClickListener { selectDept("Миномет") }
-        findViewById<Button>(R.id.btn_dept_artillery).setOnClickListener { selectDept("Артиллерия") }
-        findViewById<Button>(R.id.btn_dept_tanks).setOnClickListener { selectDept("Танки") }
-    }
+        val deptList = findViewById<LinearLayout>(R.id.dept_list_container)
 
-    private fun selectDept(dept: String) {
-        SharedPrefs.saveDept(this, dept)
-        startActivity(Intent(this, MainActivity::class.java))
-        finish()
+        val depts = SharedPrefs.getDepts(this)
+        if (depts.isEmpty()) {
+            // Если список пуст — создаем дефолтный
+            SharedPrefs.saveDepts(this, listOf("БпЛА", "Миномет", "Артиллерия", "Танки"))
+            recreate()
+            return
+        }
+
+        deptList.removeAllViews()
+
+        depts.forEach { deptName ->
+            val btn = Button(this).apply {
+                text = deptName
+                setPadding(16, 24, 16, 24)
+                textSize = 16f
+                setBackgroundResource(R.drawable.btn_outline)
+                setOnClickListener {
+                    SharedPrefs.saveDept(this@DeptSelectActivity, deptName)
+                    startActivity(Intent(this@DeptSelectActivity, MainActivity::class.java))
+                    finish()
+                }
+            }
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 8) }
+            btn.layoutParams = params
+            deptList.addView(btn)
+        }
     }
 }

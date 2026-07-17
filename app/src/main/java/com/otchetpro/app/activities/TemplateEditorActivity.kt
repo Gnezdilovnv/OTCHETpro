@@ -23,7 +23,6 @@ class TemplateEditorActivity : AppCompatActivity() {
     private var isEditMode = false
     private var dept = ""
     private var allVariables = listOf<Variable>()
-    private var templateType = "own"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,8 +45,7 @@ class TemplateEditorActivity : AppCompatActivity() {
             tvTitle.text = "Редактировать шаблон"
             etName.setText(intent.getStringExtra("template_name") ?: "")
             etText.setText(intent.getStringExtra("template_text") ?: "")
-            templateType = intent.getStringExtra("template_type") ?: "own"
-            cbCommon.isChecked = templateType == "common"
+            cbCommon.isChecked = intent.getStringExtra("template_type") == "common"
         } else {
             tvTitle.text = "Новый шаблон"
             cbCommon.isChecked = false
@@ -61,6 +59,56 @@ class TemplateEditorActivity : AppCompatActivity() {
 
     private fun setupVariableButtons() {
         llVariableButtons.removeAllViews()
+
+        // ============================================================
+        // СИСТЕМНЫЕ ПЕРЕМЕННЫЕ
+        // ============================================================
+        val systemVars = listOf(
+            "Подразделение" to "Название отдела",
+            "Расчет" to "Выбранный расчет",
+            "Соисполнители" to "Список соисполнителей"
+        )
+
+        val sysLabel = TextView(this).apply {
+            text = "Системные переменные:"
+            textSize = 12f
+            setTextColor(0xFF6F85A5.toInt())
+            setPadding(0, 8, 0, 4)
+        }
+        llVariableButtons.addView(sysLabel)
+
+        systemVars.forEach { (name, hint) ->
+            val btn = Button(this).apply {
+                text = name
+                setPadding(16, 8, 16, 8)
+                setOnClickListener {
+                    val cursorPosition = etText.selectionStart
+                    val text = etText.text.toString()
+                    val newText = text.substring(0, cursorPosition) + 
+                                   "{{$name}}" + 
+                                   text.substring(cursorPosition)
+                    etText.setText(newText)
+                    etText.setSelection(cursorPosition + "{{$name}}".length)
+                }
+            }
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 8, 8) }
+            btn.layoutParams = params
+            llVariableButtons.addView(btn)
+        }
+
+        // ============================================================
+        // ПОЛЬЗОВАТЕЛЬСКИЕ ПЕРЕМЕННЫЕ
+        // ============================================================
+        val userLabel = TextView(this).apply {
+            text = "Пользовательские переменные:"
+            textSize = 12f
+            setTextColor(0xFF6F85A5.toInt())
+            setPadding(0, 12, 0, 4)
+        }
+        llVariableButtons.addView(userLabel)
 
         allVariables.forEach { variable ->
             val btn = Button(this).apply {
@@ -79,9 +127,7 @@ class TemplateEditorActivity : AppCompatActivity() {
             val params = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { 
-                setMargins(0, 0, 8, 8)
-            }
+            ).apply { setMargins(0, 0, 8, 8) }
             btn.layoutParams = params
             llVariableButtons.addView(btn)
         }

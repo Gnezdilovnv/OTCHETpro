@@ -36,17 +36,16 @@ object SharedPrefs {
     }
     fun saveSubDepts(c: Context, l: List<String>) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("subs", gson.toJson(l)).apply() }
 
+    fun getDepts(c: Context): List<String> {
+        val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("depts", "[]") ?: "[]"
+        return try { gson.fromJson(j, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { listOf("БпЛА", "Миномет", "Артиллерия", "Танки") }
+    }
+    fun saveDepts(c: Context, l: List<String>) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("depts", gson.toJson(l)).apply() }
+
     fun saveDeptUnit(c: Context, dept: String, unit: String) {
         c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("dept_unit_$dept", unit).apply()
     }
     fun getDeptUnit(c: Context, dept: String): String? {
         return c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("dept_unit_$dept", null)
     }
-
-    // Управление списком подразделений
-    fun getDepts(c: Context): List<String> {
-        val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("depts", "[]") ?: "[]"
-        return try { gson.fromJson(j, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { listOf("БпЛА", "Миномет", "Артиллерия", "Танки") }
-    }
-    fun saveDepts(c: Context, l: List<String>) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("depts", gson.toJson(l)).apply() }
 }

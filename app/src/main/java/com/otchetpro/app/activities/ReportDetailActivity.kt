@@ -69,7 +69,6 @@ class ReportDetailActivity : AppCompatActivity() {
                     else tvEmailStatus.visibility = View.GONE
                     tvReportDate.text = "Создан: ${java.text.SimpleDateFormat("dd.MM.yyyy HH:mm").format(r.createdAt)}"
                     
-                    // Ищем файл
                     findFile(r.id)
                 }
             }
@@ -183,7 +182,6 @@ class ReportDetailActivity : AppCompatActivity() {
             Сгенерировано автоматически в OTCHETpro
         """.trimIndent()
 
-        // Ищем файл
         val reportsDir = DocxGenerator.getReportsDir()
         val files = reportsDir.listFiles { file -> 
             file.isFile && file.name.contains("Отчет_${r.id}") && file.extension == "docx"
@@ -204,14 +202,12 @@ class ReportDetailActivity : AppCompatActivity() {
             intent.putExtra(Intent.EXTRA_STREAM, uri)
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         } else {
-            // Если файла нет — отправляем текст
             intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_TEXT, body + "\n\n" + r.text)
         }
         
         startActivity(Intent.createChooser(intent, "Отправить письмо"))
 
-        // Обновляем статус
         CoroutineScope(Dispatchers.IO).launch {
             val db = AppDatabase.getInstance(this@ReportDetailActivity)
             val current = db.reportDao().getById(id)

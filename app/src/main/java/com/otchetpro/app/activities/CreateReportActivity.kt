@@ -12,13 +12,13 @@ import kotlinx.coroutines.*
 class CreateReportActivity : AppCompatActivity() {
 
     private lateinit var spinnerTemplate: Spinner
+    private lateinit var spinnerDept: Spinner
+    private lateinit var spinnerUnit: Spinner
     private lateinit var tvPreview: TextView
     private lateinit var btnSave: Button
     private lateinit var btnClose: Button
     private lateinit var linearVariables: LinearLayout
     private lateinit var tvVarCount: TextView
-    private lateinit var spinnerDept: Spinner
-    private lateinit var spinnerUnit: Spinner
     
     private var dept = ""
     private val variableValues = mutableMapOf<String, String>()
@@ -26,41 +26,33 @@ class CreateReportActivity : AppCompatActivity() {
     private var selectedUnit = ""
     private var templates = listOf<Template>()
     private var allVariables = listOf<Variable>()
-    private var subDepts = listOf<String>()
+    private var allDepts = listOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_create_report)
 
         spinnerTemplate = findViewById(R.id.spinner_template)
+        spinnerDept = findViewById(R.id.spinner_dept)
+        spinnerUnit = findViewById(R.id.spinner_unit)
         tvPreview = findViewById(R.id.tv_preview)
         btnSave = findViewById(R.id.btn_save_report)
         btnClose = findViewById(R.id.btn_close_create)
         linearVariables = findViewById(R.id.linear_variables)
         tvVarCount = findViewById(R.id.tv_var_count)
-        spinnerDept = findViewById(R.id.spinner_dept)
-        spinnerUnit = findViewById(R.id.spinner_unit)
         
         dept = SharedPrefs.getDept(this)
-        subDepts = SharedPrefs.getSubDepts(this)
+        allDepts = SharedPrefs.getDepts(this)
 
-        // Загружаем шаблоны (свои + общие)
-        val allTemplates = SharedPrefs.getTemplates(this)
-        templates = allTemplates.filter { it.dept == dept || it.type == "common" }
-        
-        // Настраиваем спиннеры
         setupDeptSpinner()
         setupUnitSpinner()
         setupTemplateSpinner()
         
         allVariables = SharedPrefs.getVariables(this).filter { it.dept == dept || it.typeGlobal == "common" }
-        
         generateVariableFields()
 
         spinnerTemplate.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) { 
-                updatePreview() 
-            }
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) { updatePreview() }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
@@ -71,11 +63,12 @@ class CreateReportActivity : AppCompatActivity() {
     }
 
     private fun setupDeptSpinner() {
-        val depts = listOf("БпЛА", "Миномет", "Артиллерия", "Танки")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, depts)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerDept.adapter = adapter
-        spinnerDept.setSelection(depts.indexOf(dept))
+        
+        val currentIndex = allDepts.indexOf(dept)
+        if (currentIndex >= 0) spinnerDept.setSelection(currentIndex)
         
         spinnerDept.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -88,16 +81,18 @@ class CreateReportActivity : AppCompatActivity() {
     }
 
     private fun setupUnitSpinner() {
-        val unitMap = mapOf(
-            "БпЛА" to listOf("ПВР №2 «Пчела»", "ПВР №3 «Шмель»", "ПВР №4 «Оса»"),
-            "Миномет" to listOf("расчет миномета (2Б11 И, 120мм) «ТИГР»", "расчет миномета (2Б9) «Град»", "расчет миномета (2Б14) «Сани»"),
-            "Артиллерия" to listOf("расчет 152-мм гаубицы «Гиацинт»", "расчет 152-мм гаубицы «Мста»", "расчет 203-мм гаубицы «Акация»"),
-            "Танки" to listOf("танковый взвод Т-72", "танковый взвод Т-80", "танковый взвод Т-90")
-        )
+        // Ищем переменную "Расчет" для выбранного отдела
+        val vars = SharedPrefs.getVariables(this).filter { 
+            it.name == "Расчет" && it.dept == selectedDept && it.type == "select"
+        }
         
-        val currentDept = spinnerDept.selectedItem.toString()
-        val units = unitMap[currentDept] ?: listOf()
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, units)
+        val options = if (vars.isNotEmpty()) {
+            vars.first().options
+        } else {
+            listOf("Нет расчетов")
+        }
+        
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerUnit.adapter = adapter
         
@@ -111,6 +106,8 @@ class CreateReportActivity : AppCompatActivity() {
     }
 
     private fun setupTemplateSpinner() {
+        val allTemplates = SharedPrefs.getTemplates(this)
+        templates = allTemplates.filter { it.dept == dept || it.type == "common" }
         val templateNames = templates.map { it.name }
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, templateNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -121,6 +118,8 @@ class CreateReportActivity : AppCompatActivity() {
         linearVariables.removeAllViews()
         
         allVariables.forEach { variable ->
+            if (variable.name == "Расчет") return@forEach // Расчет уже есть в спиннере
+            
             val row = LinearLayout(this).apply { 
                 orientation = LinearLayout.VERTICAL
                 setPadding(0, 0, 0, 16)
@@ -226,7 +225,7 @@ class CreateReportActivity : AppCompatActivity() {
         
         var text = templates[position].text
         
-        // Подставляем подразделение и расчет
+        // Системные переменные
         val deptName = spinnerDept.selectedItem.toString()
         val unitName = spinnerUnit.selectedItem.toString()
         text = text.replace("{{Подразделение}}", deptName)
@@ -234,6 +233,7 @@ class CreateReportActivity : AppCompatActivity() {
         
         // Подставляем переменные
         allVariables.forEach { variable ->
+            if (variable.name == "Расчет") return@forEach
             val value = variableValues[variable.name] ?: ""
             text = text.replace("{{${variable.name}}}", if (value.isNotEmpty()) value else "[${variable.name}]")
         }
@@ -251,7 +251,7 @@ class CreateReportActivity : AppCompatActivity() {
         
         var text = templates[position].text
         
-        // Подставляем подразделение и расчет
+        // Системные переменные
         val deptName = spinnerDept.selectedItem.toString()
         val unitName = spinnerUnit.selectedItem.toString()
         text = text.replace("{{Подразделение}}", deptName)
@@ -259,6 +259,7 @@ class CreateReportActivity : AppCompatActivity() {
         
         // Подставляем переменные
         allVariables.forEach { variable ->
+            if (variable.name == "Расчет") return@forEach
             val value = variableValues[variable.name] ?: ""
             text = text.replace("{{${variable.name}}}", if (value.isNotEmpty()) value else "[${variable.name}]")
         }
@@ -266,6 +267,7 @@ class CreateReportActivity : AppCompatActivity() {
         // Проверяем обязательные поля
         var allFilled = true
         allVariables.forEach { variable ->
+            if (variable.name == "Расчет") return@forEach
             if (variable.required) {
                 val value = variableValues[variable.name] ?: ""
                 if (value.isEmpty()) {
@@ -290,7 +292,7 @@ class CreateReportActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             val id = AppDatabase.getInstance(this@CreateReportActivity).reportDao().insert(report)
             val fileName = "Отчет_${id}.docx"
-            val file = DocxGenerator.generate(this@CreateReportActivity, text, fileName)
+            val file = DocxGenerator.generateReport(this@CreateReportActivity, text, fileName)
             withContext(Dispatchers.Main) {
                 if (file != null) {
                     Toast.makeText(this@CreateReportActivity, "✅ Сохранено: ${file.absolutePath}", Toast.LENGTH_LONG).show()

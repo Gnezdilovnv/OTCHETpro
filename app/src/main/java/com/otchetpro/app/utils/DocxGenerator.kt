@@ -6,7 +6,33 @@ import org.apache.poi.xwpf.usermodel.*
 import java.io.*
 
 object DocxGenerator {
-    fun generate(context: Context, text: String, fileName: String): File? {
+
+    private fun getRootDir(): File {
+        val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+        val root = File(docsDir, "OTCHETpro")
+        if (!root.exists()) root.mkdirs()
+        return root
+    }
+
+    fun getReportsDir(): File {
+        val dir = File(getRootDir(), "Отчеты")
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+
+    fun getSettingsDir(): File {
+        val dir = File(getRootDir(), "Настройки")
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+
+    fun getExportDir(): File {
+        val dir = File(getRootDir(), "Экспорт")
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+
+    fun generateReport(context: Context, text: String, fileName: String): File? {
         return try {
             val doc = XWPFDocument()
             val p = doc.createParagraph()
@@ -16,16 +42,8 @@ object DocxGenerator {
             r.fontSize = 12
             r.fontFamily = "Times New Roman"
 
-            // Ищем папку "Отчеты" в Documents
-            val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val reportsDir = File(docsDir, "OTCHETpro")
-            
-            // Если папки нет — создаём
-            if (!reportsDir.exists()) {
-                reportsDir.mkdirs()
-            }
-
-            val f = File(reportsDir, fileName)
+            val dir = getReportsDir()
+            val f = File(dir, fileName)
             FileOutputStream(f).use { doc.write(it) }
             doc.close()
             f
@@ -33,14 +51,5 @@ object DocxGenerator {
             e.printStackTrace()
             null
         }
-    }
-
-    fun getReportsDir(): File {
-        val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-        val reportsDir = File(docsDir, "OTCHETpro")
-        if (!reportsDir.exists()) {
-            reportsDir.mkdirs()
-        }
-        return reportsDir
     }
 }
