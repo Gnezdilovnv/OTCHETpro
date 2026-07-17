@@ -254,8 +254,9 @@ class SettingsActivity : AppCompatActivity() {
     private fun addVariable() {
         val nm = EditText(this).apply { hint = "Название" }
         val tp = Spinner(this).apply { 
-            adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, 
-                VariableTypes.all.map { VariableTypes.displayNames[it] ?: it })
+            val items = VariableTypes.all.map { VariableTypes.displayNames[it] ?: it }
+            adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, items)
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
         val ck = CheckBox(this).apply { text = "Обязательное" }
         val cm = CheckBox(this).apply { text = "Общая" }
