@@ -8,57 +8,97 @@ import com.otchetpro.app.data.*
 object SharedPrefs {
     private val gson = Gson()
     private const val P = "otchetpro_prefs"
+    private val lock = Any() // Для синхронизации
 
     fun getDept(c: Context) = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("dept", "БпЛА") ?: "БпЛА"
-    fun saveDept(c: Context, d: String) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("dept", d).apply() }
+    fun saveDept(c: Context, d: String) { 
+        synchronized(lock) {
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("dept", d).apply() 
+        }
+    }
 
     fun getTemplates(c: Context): List<Template> {
-        val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("templates", "[]") ?: "[]"
-        return try { gson.fromJson(j, object : TypeToken<List<Template>>() {}.type) } catch (e: Exception) { emptyList() }
+        synchronized(lock) {
+            val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("templates", "[]") ?: "[]"
+            return try { gson.fromJson(j, object : TypeToken<List<Template>>() {}.type) } catch (e: Exception) { emptyList() }
+        }
     }
-    fun saveTemplates(c: Context, l: List<Template>) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("templates", gson.toJson(l)).apply() }
+    fun saveTemplates(c: Context, l: List<Template>) { 
+        synchronized(lock) {
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("templates", gson.toJson(l)).apply() 
+        }
+    }
 
     fun getVariables(c: Context): List<Variable> {
-        val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("vars", "[]") ?: "[]"
-        return try { gson.fromJson(j, object : TypeToken<List<Variable>>() {}.type) } catch (e: Exception) { emptyList() }
+        synchronized(lock) {
+            val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("vars", "[]") ?: "[]"
+            return try { gson.fromJson(j, object : TypeToken<List<Variable>>() {}.type) } catch (e: Exception) { emptyList() }
+        }
     }
-    fun saveVariables(c: Context, l: List<Variable>) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("vars", gson.toJson(l)).apply() }
+    fun saveVariables(c: Context, l: List<Variable>) { 
+        synchronized(lock) {
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("vars", gson.toJson(l)).apply() 
+        }
+    }
 
     fun getRecipients(c: Context): List<Recipient> {
-        val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("recips", "[]") ?: "[]"
-        return try { gson.fromJson(j, object : TypeToken<List<Recipient>>() {}.type) } catch (e: Exception) { emptyList() }
+        synchronized(lock) {
+            val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("recips", "[]") ?: "[]"
+            return try { gson.fromJson(j, object : TypeToken<List<Recipient>>() {}.type) } catch (e: Exception) { emptyList() }
+        }
     }
-    fun saveRecipients(c: Context, l: List<Recipient>) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("recips", gson.toJson(l)).apply() }
+    fun saveRecipients(c: Context, l: List<Recipient>) { 
+        synchronized(lock) {
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("recips", gson.toJson(l)).apply() 
+        }
+    }
 
     fun getSubDepts(c: Context): List<String> {
-        val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("subs", "[]") ?: "[]"
-        return try { gson.fromJson(j, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { emptyList() }
+        synchronized(lock) {
+            val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("subs", "[]") ?: "[]"
+            return try { gson.fromJson(j, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { emptyList() }
+        }
     }
-    fun saveSubDepts(c: Context, l: List<String>) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("subs", gson.toJson(l)).apply() }
+    fun saveSubDepts(c: Context, l: List<String>) { 
+        synchronized(lock) {
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("subs", gson.toJson(l)).apply() 
+        }
+    }
 
     fun getDepts(c: Context): List<String> {
-        val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("depts", "[]") ?: "[]"
-        return try { gson.fromJson(j, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { listOf("БпЛА", "Миномет", "Артиллерия", "Танки") }
+        synchronized(lock) {
+            val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("depts", "[]") ?: "[]"
+            return try { gson.fromJson(j, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { listOf("БпЛА", "Миномет", "Артиллерия", "Танки") }
+        }
     }
-    fun saveDepts(c: Context, l: List<String>) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("depts", gson.toJson(l)).apply() }
+    fun saveDepts(c: Context, l: List<String>) { 
+        synchronized(lock) {
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("depts", gson.toJson(l)).apply() 
+        }
+    }
 
     fun saveDeptUnit(c: Context, dept: String, unit: String) {
-        c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("dept_unit_$dept", unit).apply()
+        synchronized(lock) {
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("dept_unit_$dept", unit).apply()
+        }
     }
     fun getDeptUnit(c: Context, dept: String): String? {
-        return c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("dept_unit_$dept", null)
+        synchronized(lock) {
+            return c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("dept_unit_$dept", null)
+        }
     }
 
-    // Получить все расчеты (переменные "Расчет" из всех подразделений)
     fun getAllUnits(c: Context): List<Pair<String, String>> {
-        val allVars = getVariables(c)
-        val unitVars = allVars.filter { it.name == "Расчет" && it.type == "select" }
-        val result = mutableListOf<Pair<String, String>>()
-        unitVars.forEach { v ->
-            v.options.forEach { option ->
-                result.add(Pair(v.dept, option))
+        synchronized(lock) {
+            val allVars = getVariables(c)
+            val unitVars = allVars.filter { it.name == "Расчет" && it.type == "select" }
+            val result = mutableListOf<Pair<String, String>>()
+            unitVars.forEach { v ->
+                v.options.forEach { option ->
+                    result.add(Pair(v.dept, option))
+                }
             }
+            return result
         }
-        return result
     }
 }

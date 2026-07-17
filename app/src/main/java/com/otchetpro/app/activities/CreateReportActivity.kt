@@ -12,6 +12,8 @@ import com.otchetpro.app.R
 import com.otchetpro.app.data.*
 import com.otchetpro.app.utils.*
 import kotlinx.coroutines.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 class CreateReportActivity : AppCompatActivity() {
 
@@ -166,7 +168,7 @@ class CreateReportActivity : AppCompatActivity() {
     }
 
     // ============================================================
-    // МАСКА ВВОДА ДАТЫ
+    // МАСКА ВВОДА ДАТЫ + ВАЛИДАЦИЯ
     // ============================================================
     private fun setupDateMask(editText: EditText) {
         editText.addTextChangedListener(object : TextWatcher {
@@ -178,6 +180,17 @@ class CreateReportActivity : AppCompatActivity() {
                 val clean = text.replace(Regex("[^0-9]"), "")
                 
                 if (clean.length >= 8) {
+                    val day = clean.substring(0, 2).toIntOrNull() ?: 0
+                    val month = clean.substring(2, 4).toIntOrNull() ?: 0
+                    val year = clean.substring(4, 8).toIntOrNull() ?: 0
+                    
+                    // Валидация даты
+                    if (day in 1..31 && month in 1..12 && year in 1900..2100) {
+                        editText.error = null
+                    } else {
+                        editText.error = "Некорректная дата"
+                    }
+                    
                     isUpdating = true
                     val formatted = "${clean.substring(0,2)}.${clean.substring(2,4)}.${clean.substring(4,8)}"
                     editText.setText(formatted)
@@ -194,6 +207,20 @@ class CreateReportActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
+    }
+
+    // Валидация числового поля
+    private fun validateNumberField(editText: EditText): Boolean {
+        val text = editText.text.toString()
+        if (text.isEmpty()) return true
+        return try {
+            text.toDouble()
+            editText.error = null
+            true
+        } catch (e: NumberFormatException) {
+            editText.error = "Введите число"
+            false
+        }
     }
 
     private fun generateVariableFields() {
@@ -240,6 +267,7 @@ class CreateReportActivity : AppCompatActivity() {
                             variableValues[variable.name] = text.toString()
                             updatePreview()
                             autoSaveDraft()
+                            validateNumberField(this)
                         }
                         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -371,7 +399,6 @@ class CreateReportActivity : AppCompatActivity() {
         if (draftData.isNullOrEmpty()) return
         
         try {
-            // Восстанавливаем значения
             val data = draftData.replace("{", "").replace("}", "").split(", ")
             data.forEach { pair ->
                 val parts = pair.split("=")
@@ -469,7 +496,6 @@ class CreateReportActivity : AppCompatActivity() {
                 val file = DocxGenerator.generateReport(this@CreateReportActivity, text, fileName)
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
-                    // Очищаем черновик
                     getSharedPreferences("draft", MODE_PRIVATE).edit().clear().apply()
                     if (file != null) {
                         Toast.makeText(this@CreateReportActivity, "✅ Сохранено: ${file.absolutePath}", Toast.LENGTH_LONG).show()
@@ -519,16 +545,3 @@ class CreateReportActivity : AppCompatActivity() {
         override fun getItemCount(): Int = items.size
     }
 }
-
-    // Валидация числового поля
-    private fun validateNumberField(editText: EditText): Boolean {
-        val text = editText.text.toString()
-        if (text.isEmpty()) return true // Пустое поле допустимо (если не обязательное)
-        return try {
-            text.toDouble()
-            true
-        } catch (e: NumberFormatException) {
-            editText.error = "Введите число"
-            false
-        }
-    }

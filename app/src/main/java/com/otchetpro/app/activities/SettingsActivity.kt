@@ -869,3 +869,14 @@ class SettingsActivity : AppCompatActivity() {
         if (query.isEmpty()) return list
         return list.filter { it.contains(query, ignoreCase = true) }
     }
+
+    // Пагинация для списков
+    private fun <T> paginateList(list: List<T>, page: Int, pageSize: Int): List<T> {
+        val start = page * pageSize
+        val end = minOf(start + pageSize, list.size)
+        return if (start < list.size) list.subList(start, end) else emptyList()
+    }
+
+    // Текущие страницы
+    private var deptPage = 0
+    private val pageSize = 10
