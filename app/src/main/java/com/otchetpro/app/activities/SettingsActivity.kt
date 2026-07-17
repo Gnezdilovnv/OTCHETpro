@@ -2,22 +2,26 @@ package com.otchetpro.app.activities
 
 import android.app.AlertDialog
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.DocumentsContract
+import android.provider.OpenableColumns
 import android.view.View
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.otchetpro.app.R
-import com.otchetpro.app.adapters.*
 import com.otchetpro.app.data.*
+import com.otchetpro.app.utils.DocxGenerator
 import com.otchetpro.app.utils.SharedPrefs
 import java.io.File
 import java.io.FileOutputStream
 import java.io.FileReader
+import java.text.SimpleDateFormat
 import java.util.*
 
 class SettingsActivity : AppCompatActivity() {
@@ -25,6 +29,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var tvDeptInfo: TextView
     private lateinit var tvSettingsInfo: TextView
     private lateinit var tvSettingsTag: TextView
+    private lateinit var tvImportResult: TextView
+    private lateinit var tvExportResult: TextView
     
     private lateinit var llSubDepts: LinearLayout
     private lateinit var llTemplates: LinearLayout
@@ -39,6 +45,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var btnImport: Button
     private lateinit var btnExport: Button
     private lateinit var btnTemplateDownload: Button
+    private lateinit var btnTemplateAdd: Button
+    private lateinit var btnVarAdd: Button
 
     private var dept = ""
     private var allDepts = mutableListOf<String>()
@@ -47,6 +55,17 @@ class SettingsActivity : AppCompatActivity() {
     private var variables = mutableListOf<Variable>()
     private var recipients = mutableListOf<Recipient>()
 
+    // Регистрация для выбора файла
+    private val filePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            result.data?.data?.let { uri ->
+                importFromUri(uri)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
@@ -54,6 +73,8 @@ class SettingsActivity : AppCompatActivity() {
         tvDeptInfo = findViewById(R.id.tv_dept_info_settings)
         tvSettingsInfo = findViewById(R.id.tv_settings_info)
         tvSettingsTag = findViewById(R.id.tv_settings_tag)
+        tvImportResult = findViewById(R.id.tv_import_result)
+        tvExportResult = findViewById(R.id.tv_export_result)
         
         llDepts = findViewById(R.id.ll_depts_list)
         llSubDepts = findViewById(R.id.ll_subdepts_list)
@@ -68,17 +89,20 @@ class SettingsActivity : AppCompatActivity() {
         btnImport = findViewById(R.id.btn_import)
         btnExport = findViewById(R.id.btn_export)
         btnTemplateDownload = findViewById(R.id.btn_template_download)
+        btnTemplateAdd = findViewById(R.id.btn_template_add)
+        btnVarAdd = findViewById(R.id.btn_var_add)
 
         findViewById<Button>(R.id.btn_close_settings).setOnClickListener { finish() }
         findViewById<Button>(R.id.btn_subdept_add).setOnClickListener { addSubDept() }
         findViewById<Button>(R.id.btn_recipient_add).setOnClickListener { addRecipient() }
-        findViewById<Button>(R.id.btn_template_add).setOnClickListener { 
+        
+        btnTemplateAdd.setOnClickListener { 
             startActivity(Intent(this, TemplateEditorActivity::class.java))
         }
-        findViewById<Button>(R.id.btn_var_add).setOnClickListener { addVariable() }
+        btnVarAdd.setOnClickListener { addVariable() }
         
         btnExport.setOnClickListener { exportSettings() }
-        btnImport.setOnClickListener { importSettings() }
+        btnImport.setOnClickListener { openFilePicker() }
         btnTemplateDownload.setOnClickListener { downloadTemplate() }
 
         setupAccordion(R.id.accordion_dept_header, R.id.accordion_dept_body)
@@ -112,14 +136,14 @@ class SettingsActivity : AppCompatActivity() {
             allDepts = listOf("БпЛА", "Миномет", "Артиллерия", "Танки").toMutableList()
         }
         
-        tvDeptInfo.text = "Настройки для отдела: $dept"
+        tvDeptInfo.text = "Настройки для подразделения: $dept"
         
         subDepts = SharedPrefs.getSubDepts(this).toMutableList()
         templates = SharedPrefs.getTemplates(this).filter { it.dept == dept || it.type == "common" }.toMutableList()
         variables = SharedPrefs.getVariables(this).filter { it.dept == dept || it.typeGlobal == "common" }.toMutableList()
         recipients = SharedPrefs.getRecipients(this).toMutableList()
 
-        // === ПОДРАЗДЕЛЕНИЯ (редактируемые) ===
+        // === ПОДРАЗДЕЛЕНИЯ ===
         llDepts.removeAllViews()
         allDepts.forEachIndexed { i, name ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
@@ -156,7 +180,7 @@ class SettingsActivity : AppCompatActivity() {
                 text = "✕"
                 setOnClickListener {
                     if (allDepts.size <= 1) {
-                        Toast.makeText(this@SettingsActivity, "Нельзя удалить последний отдел", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@SettingsActivity, "Нельзя удалить последнее подразделение", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
                     AlertDialog.Builder(this@SettingsActivity)
@@ -165,6 +189,12 @@ class SettingsActivity : AppCompatActivity() {
                         .setPositiveButton("Удалить") { _, _ ->
                             allDepts.removeAt(i)
                             SharedPrefs.saveDepts(this@SettingsActivity, allDepts)
+                            val vars = SharedPrefs.getVariables(this@SettingsActivity).toMutableList()
+                            vars.removeAll { it.dept == name }
+                            SharedPrefs.saveVariables(this@SettingsActivity, vars)
+                            val temps = SharedPrefs.getTemplates(this@SettingsActivity).toMutableList()
+                            temps.removeAll { it.dept == name }
+                            SharedPrefs.saveTemplates(this@SettingsActivity, temps)
                             if (dept == name) {
                                 SharedPrefs.saveDept(this@SettingsActivity, allDepts[0])
                                 dept = allDepts[0]
@@ -182,10 +212,9 @@ class SettingsActivity : AppCompatActivity() {
             llDepts.addView(row)
         }
         
-        // Кнопка добавления отдела
         val addDeptRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 8, 0, 0) }
         val addDeptInput = EditText(this).apply { 
-            hint = "Название нового отдела"
+            hint = "Название нового подразделения"
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         val addDeptBtn = Button(this).apply {
@@ -197,7 +226,7 @@ class SettingsActivity : AppCompatActivity() {
                     SharedPrefs.saveDepts(this@SettingsActivity, allDepts)
                     addDeptInput.text.clear()
                     loadData()
-                    Toast.makeText(this@SettingsActivity, "✅ Отдел добавлен", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@SettingsActivity, "✅ Подразделение добавлено", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this@SettingsActivity, "Некорректное имя или уже существует", Toast.LENGTH_SHORT).show()
                 }
@@ -207,7 +236,7 @@ class SettingsActivity : AppCompatActivity() {
         addDeptRow.addView(addDeptBtn)
         llDepts.addView(addDeptRow)
 
-        // === ПОДПОДРАЗДЕЛЕНИЯ ===
+        // === СОИСПОЛНИТЕЛИ (подподразделения) ===
         llSubDepts.removeAllViews()
         subDepts.forEachIndexed { i, name ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
@@ -221,7 +250,7 @@ class SettingsActivity : AppCompatActivity() {
                 setOnClickListener {
                     val input = EditText(this@SettingsActivity).apply { setText(name) }
                     AlertDialog.Builder(this@SettingsActivity)
-                        .setTitle("Редактировать подподразделение")
+                        .setTitle("Редактировать соисполнителя")
                         .setView(input)
                         .setPositiveButton("Сохранить") { _, _ ->
                             val newName = input.text.toString().trim()
@@ -254,7 +283,7 @@ class SettingsActivity : AppCompatActivity() {
         templates.forEachIndexed { i, t ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 8, 0, 8) }
             val nameTv = TextView(this).apply { 
-                text = t.name + if (t.type == "common") " (общий)" else " (собственный)"
+                text = t.name + if (t.type == "common") " (общий)" else " (подразделения)"
                 textSize = 14f
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
             }
@@ -291,7 +320,7 @@ class SettingsActivity : AppCompatActivity() {
             llTemplates.addView(row)
         }
 
-        // === ПЕРЕМЕННЫЕ (редактируемые) ===
+        // === ПЕРЕМЕННЫЕ ===
         llVars.removeAllViews()
         variables.forEachIndexed { i, v ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 4, 0, 4) }
@@ -306,14 +335,19 @@ class SettingsActivity : AppCompatActivity() {
                 textSize = 11f
                 setTextColor(0xFF6F85A5.toInt())
             }
-            val optionsTv = TextView(this).apply {
-                text = if (v.options.isNotEmpty()) " [${v.options.joinToString(", ")}]" else ""
+            val scopeTv = TextView(this).apply {
+                text = when (v.typeGlobal) {
+                    "common" -> " [Общая]"
+                    "dept" -> " [Подразделение]"
+                    "unit" -> " [Расчет]"
+                    else -> ""
+                }
                 textSize = 11f
-                setTextColor(0xFFB45A1C.toInt())
+                setTextColor(0xFF1A4CBA.toInt())
             }
             headerRow.addView(tv)
             headerRow.addView(typeTv)
-            headerRow.addView(optionsTv)
+            headerRow.addView(scopeTv)
             
             val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             val editBtn = Button(this).apply {
@@ -359,7 +393,7 @@ class SettingsActivity : AppCompatActivity() {
 
         val unit = SharedPrefs.getDeptUnit(this, dept) ?: getDefaultUnit(dept)
         tvSettingsInfo.text = 
-            "${allDepts.size} отделов · ${subDepts.size} подподразделений · ${templates.size} шаблонов · ${variables.size} переменных"
+            "${allDepts.size} подразделений · ${subDepts.size} соисполнителей · ${templates.size} шаблонов · ${variables.size} переменных"
         tvSettingsTag.text = "$dept — $unit"
     }
 
@@ -372,6 +406,38 @@ class SettingsActivity : AppCompatActivity() {
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         tp.adapter = spinnerAdapter
         tp.setSelection(VariableTypes.all.indexOf(v.type))
+        
+        // Выбор области видимости
+        val scopeSpinner = Spinner(this)
+        val scopeItems = listOf("Общая", "Подразделение", "Расчет")
+        val scopeAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, scopeItems)
+        scopeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        scopeSpinner.adapter = scopeAdapter
+        val scopeIndex = when (v.typeGlobal) {
+            "common" -> 0
+            "dept" -> 1
+            "unit" -> 2
+            else -> 0
+        }
+        scopeSpinner.setSelection(scopeIndex)
+        
+        // Для подразделения/расчета — выбор подразделения
+        val deptSpinner = Spinner(this)
+        val deptAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, allDepts)
+        deptAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        deptSpinner.adapter = deptAdapter
+        val deptIndex = allDepts.indexOf(v.dept)
+        if (deptIndex >= 0) deptSpinner.setSelection(deptIndex)
+        
+        // Для расчета — выбор расчета (список переменных "Расчет")
+        val unitSpinner = Spinner(this)
+        val unitItems = variables.filter { it.name == "Расчет" && it.dept == v.dept }
+            .flatMap { it.options }
+            .toList()
+        val unitAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, 
+            if (unitItems.isEmpty()) listOf("Нет расчетов") else unitItems)
+        unitAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        unitSpinner.adapter = unitAdapter
         
         val optionsInput = EditText(this).apply {
             hint = "Варианты через запятую (для списка)"
@@ -391,15 +457,25 @@ class SettingsActivity : AppCompatActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
         
+        // Показываем/скрываем дополнительные поля
+        scopeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                deptSpinner.visibility = if (position == 1 || position == 2) View.VISIBLE else View.GONE
+                unitSpinner.visibility = if (position == 2) View.VISIBLE else View.GONE
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+        
         val ck = CheckBox(this).apply { isChecked = v.required; text = "Обязательное" }
-        val cm = CheckBox(this).apply { isChecked = v.typeGlobal == "common"; text = "Общая" }
         val ct = LinearLayout(this).apply { 
             orientation = LinearLayout.VERTICAL
             addView(nm)
             addView(tp)
+            addView(scopeSpinner)
+            addView(deptSpinner)
+            addView(unitSpinner)
             addView(optionsInput)
             addView(ck)
-            addView(cm)
         }
         
         AlertDialog.Builder(this).setTitle("Редактировать переменную").setView(ct)
@@ -407,15 +483,24 @@ class SettingsActivity : AppCompatActivity() {
                 val name = nm.text.toString().trim()
                 if (name.isEmpty()) { Toast.makeText(this, "Введите название", Toast.LENGTH_SHORT).show(); return@setPositiveButton }
                 val type = VariableTypes.all[tp.selectedItemPosition]
+                val scope = when (scopeSpinner.selectedItemPosition) {
+                    0 -> "common"
+                    1 -> "dept"
+                    2 -> "unit"
+                    else -> "common"
+                }
                 val options = if (type == VariableTypes.SELECT || type == VariableTypes.MULTISELECT) {
                     optionsInput.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }
                 } else emptyList()
+                
+                val selectedDept = if (scope == "common") "" else deptSpinner.selectedItem.toString()
                 
                 variables[index] = v.copy(
                     name = name,
                     type = type,
                     required = ck.isChecked,
-                    typeGlobal = if (cm.isChecked) "common" else "own",
+                    typeGlobal = scope,
+                    dept = selectedDept,
                     options = options
                 )
                 SharedPrefs.saveVariables(this, variables)
@@ -460,12 +545,33 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun addVariable() {
-        val nm = EditText(this).apply { hint = "Название" }
+        val nm = EditText(this).apply { hint = "Название переменной" }
         val tp = Spinner(this)
         val items = VariableTypes.all.map { VariableTypes.displayNames[it] ?: it }
         val spinnerAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, items)
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         tp.adapter = spinnerAdapter
+        
+        // Выбор области видимости
+        val scopeSpinner = Spinner(this)
+        val scopeItems = listOf("Общая", "Подразделение", "Расчет")
+        val scopeAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, scopeItems)
+        scopeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        scopeSpinner.adapter = scopeAdapter
+        
+        // Для подразделения/расчета — выбор подразделения
+        val deptSpinner = Spinner(this)
+        val deptAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, allDepts)
+        deptAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        deptSpinner.adapter = deptAdapter
+        deptSpinner.visibility = View.GONE
+        
+        // Для расчета — выбор расчета (список переменных "Расчет")
+        val unitSpinner = Spinner(this)
+        val unitAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, listOf("Нет расчетов"))
+        unitAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        unitSpinner.adapter = unitAdapter
+        unitSpinner.visibility = View.GONE
         
         val optionsInput = EditText(this).apply { 
             hint = "Варианты через запятую (для списка)"
@@ -484,15 +590,56 @@ class SettingsActivity : AppCompatActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
         
+        scopeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                deptSpinner.visibility = if (position == 1 || position == 2) View.VISIBLE else View.GONE
+                unitSpinner.visibility = if (position == 2) View.VISIBLE else View.GONE
+                if (position == 2) {
+                    // Обновляем список расчетов для выбранного подразделения
+                    val selectedDept = deptSpinner.selectedItem.toString()
+                    val unitVars = variables.filter { it.name == "Расчет" && it.dept == selectedDept }
+                    val unitOptions = unitVars.flatMap { it.options }
+                    val newAdapter = ArrayAdapter<String>(
+                        this@SettingsActivity, 
+                        android.R.layout.simple_spinner_item,
+                        if (unitOptions.isEmpty()) listOf("Нет расчетов") else unitOptions
+                    )
+                    newAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    unitSpinner.adapter = newAdapter
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+        
+        // Обновляем расчеты при смене подразделения
+        deptSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (scopeSpinner.selectedItemPosition == 2) {
+                    val selectedDept = deptSpinner.selectedItem.toString()
+                    val unitVars = variables.filter { it.name == "Расчет" && it.dept == selectedDept }
+                    val unitOptions = unitVars.flatMap { it.options }
+                    val newAdapter = ArrayAdapter<String>(
+                        this@SettingsActivity, 
+                        android.R.layout.simple_spinner_item,
+                        if (unitOptions.isEmpty()) listOf("Нет расчетов") else unitOptions
+                    )
+                    newAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    unitSpinner.adapter = newAdapter
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+        
         val ck = CheckBox(this).apply { text = "Обязательное" }
-        val cm = CheckBox(this).apply { text = "Общая" }
         val ct = LinearLayout(this).apply { 
             orientation = LinearLayout.VERTICAL
             addView(nm)
             addView(tp)
+            addView(scopeSpinner)
+            addView(deptSpinner)
+            addView(unitSpinner)
             addView(optionsInput)
             addView(ck)
-            addView(cm)
         }
         
         AlertDialog.Builder(this).setTitle("Добавить переменную").setView(ct)
@@ -500,17 +647,25 @@ class SettingsActivity : AppCompatActivity() {
                 val name = nm.text.toString().trim()
                 if (name.isEmpty()) { Toast.makeText(this, "Введите название", Toast.LENGTH_SHORT).show(); return@setPositiveButton }
                 val type = VariableTypes.all[tp.selectedItemPosition]
+                val scope = when (scopeSpinner.selectedItemPosition) {
+                    0 -> "common"
+                    1 -> "dept"
+                    2 -> "unit"
+                    else -> "common"
+                }
                 val options = if (type == VariableTypes.SELECT || type == VariableTypes.MULTISELECT) {
                     optionsInput.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }
                 } else emptyList()
+                
+                val selectedDept = if (scope == "common") "" else deptSpinner.selectedItem.toString()
                 
                 variables.add(Variable(
                     id = UUID.randomUUID().toString(),
                     name = name,
                     type = type,
                     required = ck.isChecked,
-                    typeGlobal = if (cm.isChecked) "common" else "own",
-                    dept = if (cm.isChecked) "" else dept,
+                    typeGlobal = scope,
+                    dept = selectedDept,
                     options = options
                 ))
                 SharedPrefs.saveVariables(this, variables)
@@ -521,70 +676,41 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun exportSettings() {
-        try {
-            val reportsDir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
-                "OTCHETpro/Настройки"
-            )
-            if (!reportsDir.exists()) reportsDir.mkdirs()
+    // ================================================================
+    // ОТКРЫТИЕ ФАЙЛОВОГО МЕНЕДЖЕРА ДЛЯ ИМПОРТА
+    // ================================================================
+    private fun openFilePicker() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+        }
+        filePickerLauncher.launch(intent)
+    }
 
-            val data = mapOf(
-                "dept" to dept,
-                "allDepts" to allDepts,
-                "subDepts" to subDepts,
-                "templates" to templates,
-                "variables" to variables,
-                "recipients" to recipients,
-                "exportedAt" to System.currentTimeMillis()
-            )
-            val json = GsonBuilder().setPrettyPrinting().create().toJson(data)
-            val file = File(reportsDir, "настройки_${dept}_${System.currentTimeMillis()}.json")
-            FileOutputStream(file).use { it.write(json.toByteArray()) }
+    // ================================================================
+    // ИМПОРТ ИЗ URI
+    // ================================================================
+    private fun importFromUri(uri: Uri) {
+        try {
+            val contentResolver = contentResolver
+            val inputStream = contentResolver.openInputStream(uri)
+            val json = inputStream?.bufferedReader()?.readText()
+            inputStream?.close()
             
-            Toast.makeText(this, "✅ Выгружено: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+            if (json != null) {
+                val data = Gson().fromJson(json, Map::class.java)
+                doImport(data)
+            } else {
+                Toast.makeText(this, "❌ Не удалось прочитать файл", Toast.LENGTH_SHORT).show()
+            }
         } catch (e: Exception) {
-            Toast.makeText(this, "❌ Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "❌ Ошибка импорта: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun importSettings() {
-        try {
-            val reportsDir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
-                "OTCHETpro/Настройки"
-            )
-            if (!reportsDir.exists()) {
-                Toast.makeText(this, "Папка с настройками не найдена", Toast.LENGTH_SHORT).show()
-                return
-            }
-
-            val files = reportsDir.listFiles { file -> file.extension == "json" }
-            if (files.isNullOrEmpty()) {
-                Toast.makeText(this, "Нет файлов настроек", Toast.LENGTH_SHORT).show()
-                return
-            }
-
-            val fileNames = files.map { it.name }.toTypedArray()
-            AlertDialog.Builder(this)
-                .setTitle("Выберите файл для импорта")
-                .setItems(fileNames) { _, which ->
-                    try {
-                        val file = files[which]
-                        val json = FileReader(file).readText()
-                        val data = Gson().fromJson(json, Map::class.java)
-                        doImport(data)
-                    } catch (e: Exception) {
-                        Toast.makeText(this, "❌ Ошибка импорта: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                .setNegativeButton("Отмена", null)
-                .show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "❌ Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
+    // ================================================================
+    // ВЫПОЛНЕНИЕ ИМПОРТА
+    // ================================================================
     @Suppress("UNCHECKED_CAST")
     private fun doImport(data: Map<*, *>) {
         try {
@@ -625,8 +751,8 @@ class SettingsActivity : AppCompatActivity() {
                         name = it["name"] as? String ?: "",
                         type = it["type"] as? String ?: "text",
                         required = it["required"] as? Boolean ?: false,
-                        typeGlobal = if ((it["typeGlobal"] as? String) == "common") "common" else "own",
-                        dept = if ((it["typeGlobal"] as? String) == "common") "" else dept,
+                        typeGlobal = it["typeGlobal"] as? String ?: "common",
+                        dept = it["dept"] as? String ?: "",
                         options = (it["options"] as? List<String>) ?: emptyList()
                     )
                 }
@@ -649,29 +775,60 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             loadData()
+            tvImportResult.text = "✅ Импорт выполнен успешно!"
+            tvImportResult.visibility = View.VISIBLE
             Toast.makeText(this, "✅ Импорт выполнен успешно!", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "❌ Ошибка импорта: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
+    // ================================================================
+    // ЭКСПОРТ
+    // ================================================================
+    private fun exportSettings() {
+        try {
+            val settingsDir = DocxGenerator.getSettingsDir()
+
+            val data = mapOf(
+                "dept" to dept,
+                "allDepts" to allDepts,
+                "subDepts" to subDepts,
+                "templates" to templates,
+                "variables" to variables,
+                "recipients" to recipients,
+                "exportedAt" to System.currentTimeMillis()
+            )
+            val json = GsonBuilder().setPrettyPrinting().create().toJson(data)
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val fileName = "настройки_${dept}_${dateFormat.format(Date())}.json"
+            val file = File(settingsDir, fileName)
+            FileOutputStream(file).use { it.write(json.toByteArray()) }
+            
+            tvExportResult.text = "✅ Выгружено: ${file.absolutePath}"
+            tvExportResult.visibility = View.VISIBLE
+            Toast.makeText(this, "✅ Выгружено: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "❌ Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ================================================================
+    // СКАЧАТЬ ШАБЛОН НАСТРОЕК
+    // ================================================================
     private fun downloadTemplate() {
         try {
-            val reportsDir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
-                "OTCHETpro/Настройки"
-            )
-            if (!reportsDir.exists()) reportsDir.mkdirs()
+            val settingsDir = DocxGenerator.getSettingsDir()
 
             val template = mapOf(
                 "_comment" to "Шаблон настроек OTCHETpro",
                 "allDepts" to listOf("БпЛА", "Миномет", "Артиллерия", "Танки"),
-                "subDepts" to listOf("Подразделение 1", "Подразделение 2"),
+                "subDepts" to listOf("Соисполнитель 1", "Соисполнитель 2"),
                 "templates" to listOf(
                     mapOf(
                         "name" to "Название шаблона",
                         "text" to "Текст с {{Переменная}}",
-                        "type" to "own"
+                        "type" to "own или common"
                     )
                 ),
                 "variables" to listOf(
@@ -679,6 +836,8 @@ class SettingsActivity : AppCompatActivity() {
                         "name" to "Переменная",
                         "type" to "text",
                         "required" to true,
+                        "typeGlobal" to "common / dept / unit",
+                        "dept" to "БпЛА (если dept или unit)",
                         "options" to listOf("Вариант1", "Вариант2")
                     )
                 ),
@@ -686,16 +845,19 @@ class SettingsActivity : AppCompatActivity() {
                     mapOf("name" to "ФИО", "email" to "email@domain.ru")
                 ),
                 "_instructions" to listOf(
-                    "1. Замените значения на свои",
-                    "2. type: own — собственный, common — общий",
-                    "3. Для списков заполните options"
+                    "1. typeGlobal: common — общая, dept — подразделение, unit — расчет",
+                    "2. Для dept и unit укажите dept",
+                    "3. Для unit укажите расчет в options",
+                    "4. Для списков заполните options"
                 )
             )
             
             val json = GsonBuilder().setPrettyPrinting().create().toJson(template)
-            val file = File(reportsDir, "шаблон_настроек.json")
+            val file = File(settingsDir, "шаблон_настроек.json")
             FileOutputStream(file).use { it.write(json.toByteArray()) }
             
+            tvImportResult.text = "✅ Шаблон скачан: ${file.absolutePath}"
+            tvImportResult.visibility = View.VISIBLE
             Toast.makeText(this, "✅ Шаблон скачан: ${file.absolutePath}", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "❌ Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()

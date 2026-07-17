@@ -76,7 +76,7 @@
         android:id="@+id/cb_template_common"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Общий шаблон (доступен всем отделам)"
+        android:text="Общий шаблон (доступен всем подразделениям)"
         android:layout_marginBottom="12dp" />
 
     <TextView
@@ -85,21 +85,22 @@
         android:text="Вставить переменную:"
         android:textSize="12sp"
         android:textColor="#6f85a5"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="4dp" />
 
-    <HorizontalScrollView
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:maxHeight="200dp"
         android:layout_marginBottom="12dp">
 
         <LinearLayout
-            android:id="@+id/ll_variable_buttons"
-            android:layout_width="wrap_content"
+            android:id="@+id/ll_variable_buttons_container"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:padding="4dp" />
 
-    </HorizontalScrollView>
+    </ScrollView>
 
     <Button
         android:id="@+id/btn_template_save"
