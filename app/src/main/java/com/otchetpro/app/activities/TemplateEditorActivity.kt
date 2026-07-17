@@ -2,12 +2,8 @@ package com.otchetpro.app.activities
 
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.children
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.otchetpro.app.R
 import com.otchetpro.app.data.*
 import com.otchetpro.app.utils.SharedPrefs
@@ -22,12 +18,16 @@ class TemplateEditorActivity : AppCompatActivity() {
     private lateinit var btnCancel: Button
     private lateinit var llVariableContainer: LinearLayout
     private lateinit var cbCommon: CheckBox
+    private lateinit var spinnerDept: Spinner
+    private lateinit var spinnerUnit: Spinner
+    private lateinit var llDeptSelect: LinearLayout
     
     private var templateId: String? = null
     private var isEditMode = false
     private var dept = ""
     private var allVariables = listOf<Variable>()
     private var allDepts = listOf<String>()
+    private var selectedDept = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,10 +40,17 @@ class TemplateEditorActivity : AppCompatActivity() {
         btnCancel = findViewById(R.id.btn_template_cancel)
         llVariableContainer = findViewById(R.id.ll_variable_buttons_container)
         cbCommon = findViewById(R.id.cb_template_common)
+        spinnerDept = findViewById(R.id.spinner_template_dept)
+        spinnerUnit = findViewById(R.id.spinner_template_unit)
+        llDeptSelect = findViewById(R.id.ll_dept_select)
 
         dept = SharedPrefs.getDept(this)
         allDepts = SharedPrefs.getDepts(this)
         allVariables = SharedPrefs.getVariables(this)
+
+        // Настройка спиннеров для подразделения и расчета
+        setupDeptSpinner()
+        setupUnitSpinner()
 
         templateId = intent.getStringExtra("template_id")
         if (templateId != null) {
@@ -51,10 +58,24 @@ class TemplateEditorActivity : AppCompatActivity() {
             tvTitle.text = "Редактировать шаблон"
             etName.setText(intent.getStringExtra("template_name") ?: "")
             etText.setText(intent.getStringExtra("template_text") ?: "")
-            cbCommon.isChecked = intent.getStringExtra("template_type") == "common"
+            val templateType = intent.getStringExtra("template_type") ?: "own"
+            cbCommon.isChecked = templateType == "common"
+            if (templateType == "common") {
+                llDeptSelect.visibility = View.GONE
+            }
         } else {
             tvTitle.text = "Новый шаблон"
             cbCommon.isChecked = false
+            llDeptSelect.visibility = View.VISIBLE
+        }
+
+        // При смене чекбокса "Общий" — показываем/скрываем выбор подразделения
+        cbCommon.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                llDeptSelect.visibility = View.GONE
+            } else {
+                llDeptSelect.visibility = View.VISIBLE
+            }
         }
 
         setupVariableButtons()
@@ -63,135 +84,146 @@ class TemplateEditorActivity : AppCompatActivity() {
         btnCancel.setOnClickListener { finish() }
     }
 
+    private fun setupDeptSpinner() {
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerDept.adapter = adapter
+        
+        val currentIndex = allDepts.indexOf(dept)
+        if (currentIndex >= 0) spinnerDept.setSelection(currentIndex)
+        
+        spinnerDept.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                selectedDept = parent?.getItemAtPosition(position).toString() ?: dept
+                setupUnitSpinner()
+                setupVariableButtons()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun setupUnitSpinner() {
+        val unitVars = allVariables.filter { it.name == "Расчет" && it.dept == selectedDept }
+        val unitOptions = unitVars.flatMap { it.options }
+        val items = if (unitOptions.isEmpty()) listOf("Нет расчетов") else unitOptions
+        
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, items)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerUnit.adapter = adapter
+    }
+
     private fun setupVariableButtons() {
         llVariableContainer.removeAllViews()
+
+        // Определяем, какие переменные показывать
+        val isCommon = cbCommon.isChecked
+        val deptVars = allVariables.filter { 
+            it.typeGlobal == "dept" && it.dept == selectedDept 
+        }
+        val unitVars = allVariables.filter { 
+            it.typeGlobal == "unit" && it.dept == selectedDept 
+        }
         
-        // Собираем переменные по группам
+        // 1. Системные переменные (всегда)
         val systemVars = listOf(
             "Подразделение" to "{{Подразделение}}",
             "Расчет" to "{{Расчет}}",
             "Соисполнители" to "{{Соисполнители}}"
         )
-        
+        addGroup("Системные переменные", systemVars.map { it.first }, false)
+
+        // 2. Общие переменные (всегда)
         val commonVars = allVariables.filter { it.typeGlobal == "common" }
-        val deptVars = allVariables.filter { it.typeGlobal == "dept" && it.dept == dept }
-        val unitVars = allVariables.filter { it.typeGlobal == "unit" && it.dept == dept }
-        
-        // Все группы с их переменными
-        val groups = mutableListOf<Pair<String, List<Any>>>()
-        groups.add("Системные переменные" to systemVars)
-        
         if (commonVars.isNotEmpty()) {
-            groups.add("Общие переменные (${commonVars.size})" to commonVars)
-        }
-        if (deptVars.isNotEmpty()) {
-            groups.add("Подразделение (${deptVars.size})" to deptVars)
-        }
-        if (unitVars.isNotEmpty()) {
-            groups.add("Расчет (${unitVars.size})" to unitVars)
+            addGroup("Общие переменные (${commonVars.size})", commonVars.map { it.name }, false)
         }
 
-        // Добавляем группы в аккордеон
-        groups.forEach { (title, items) ->
-            val groupView = createGroupView(title, items)
-            llVariableContainer.addView(groupView)
+        // 3. Переменные подразделения (только если не общий шаблон)
+        if (!isCommon && deptVars.isNotEmpty()) {
+            addGroup("Подразделение: $selectedDept (${deptVars.size})", deptVars.map { it.name }, false)
+        }
+
+        // 4. Переменные расчета (только если не общий шаблон)
+        if (!isCommon && unitVars.isNotEmpty()) {
+            val unitName = spinnerUnit.selectedItem.toString()
+            addGroup("Расчет: $unitName (${unitVars.size})", unitVars.map { it.name }, false)
         }
     }
 
-    private fun createGroupView(title: String, items: List<Any>): View {
+    private fun addGroup(title: String, items: List<String>, isOpen: Boolean) {
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 4, 0, 4)
         }
 
-        // Заголовок группы (аккордеон)
+        // Заголовок
         val header = TextView(this).apply {
-            text = "▶ $title"
+            text = if (isOpen) "▼ $title" else "▶ $title"
             textSize = 13f
             setTextColor(0xFF0B1A2F.toInt())
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             setPadding(8, 8, 8, 8)
-            background = getDrawable(android.R.drawable.list_selector_background)
+            setBackgroundResource(android.R.drawable.list_selector_background)
             isClickable = true
             isFocusable = true
-            tag = "closed"
+            tag = if (isOpen) "open" else "closed"
         }
 
-        // Контейнер для кнопок переменных
+        // Контейнер для кнопок
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            visibility = View.GONE
+            visibility = if (isOpen) View.VISIBLE else View.GONE
             setPadding(8, 4, 8, 8)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
+            isFocusable = true
+            isFocusableInTouchMode = true
         }
 
         // Добавляем кнопки переменных
-        items.forEach { item ->
-            val btn = when (item) {
-                is Pair<*, *> -> {
-                    val name = item.first as String
-                    Button(this).apply {
-                        text = name
-                        setPadding(16, 8, 16, 8)
-                        setOnClickListener {
-                            val cursorPosition = etText.selectionStart
-                            val text = etText.text.toString()
-                            val placeholder = if (name == "Подразделение") "{{Подразделение}}" else
-                                           if (name == "Расчет") "{{Расчет}}" else
-                                           if (name == "Соисполнители") "{{Соисполнители}}" else
-                                           "{{$name}}"
-                            val newText = text.substring(0, cursorPosition) + 
-                                           placeholder + 
-                                           text.substring(cursorPosition)
-                            etText.setText(newText)
-                            etText.setSelection(cursorPosition + placeholder.length)
-                        }
+        items.forEach { name ->
+            val btn = Button(this).apply {
+                text = name
+                setPadding(16, 8, 16, 8)
+                setOnClickListener {
+                    val cursorPosition = etText.selectionStart
+                    val text = etText.text.toString()
+                    val placeholder = when (name) {
+                        "Подразделение" -> "{{Подразделение}}"
+                        "Расчет" -> "{{Расчет}}"
+                        "Соисполнители" -> "{{Соисполнители}}"
+                        else -> "{{$name}}"
                     }
+                    val newText = text.substring(0, cursorPosition) + 
+                                   placeholder + 
+                                   text.substring(cursorPosition)
+                    etText.setText(newText)
+                    etText.setSelection(cursorPosition + placeholder.length)
                 }
-                is Variable -> {
-                    Button(this).apply {
-                        text = item.name
-                        setPadding(16, 8, 16, 8)
-                        setOnClickListener {
-                            val cursorPosition = etText.selectionStart
-                            val text = etText.text.toString()
-                            val newText = text.substring(0, cursorPosition) + 
-                                           "{{${item.name}}}" + 
-                                           text.substring(cursorPosition)
-                            etText.setText(newText)
-                            etText.setSelection(cursorPosition + "{{${item.name}}}".length)
-                        }
-                    }
-                }
-                else -> null
             }
-            
-            btn?.let {
-                val params = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { setMargins(0, 0, 8, 8) }
-                it.layoutParams = params
-                content.addView(it)
-            }
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 8, 8) }
+            btn.layoutParams = params
+            content.addView(btn)
         }
 
-        // Добавляем горизонтальный скролл для кнопок
+        // Горизонтальный скролл
         val scrollView = HorizontalScrollView(this).apply {
             addView(content)
-            visibility = View.GONE
+            visibility = if (isOpen) View.VISIBLE else View.GONE
         }
 
         container.addView(header)
         container.addView(scrollView)
 
-        // Обработчик раскрытия/закрытия аккордеона
+        // Обработчик раскрытия/закрытия
         header.setOnClickListener {
-            val isOpen = header.tag == "open"
-            if (isOpen) {
+            val isOpenNow = header.tag == "open"
+            if (isOpenNow) {
                 header.text = "▶ " + header.text.toString().substring(2)
                 scrollView.visibility = View.GONE
                 header.tag = "closed"
@@ -202,7 +234,7 @@ class TemplateEditorActivity : AppCompatActivity() {
             }
         }
 
-        return container
+        llVariableContainer.addView(container)
     }
 
     private fun saveTemplate() {
@@ -219,6 +251,8 @@ class TemplateEditorActivity : AppCompatActivity() {
         }
 
         val type = if (cbCommon.isChecked) "common" else "own"
+        val selectedDept = if (type == "common") "" else spinnerDept.selectedItem.toString()
+        
         val templates = SharedPrefs.getTemplates(this).toMutableList()
         
         if (isEditMode && templateId != null) {
@@ -228,7 +262,7 @@ class TemplateEditorActivity : AppCompatActivity() {
                     name = name,
                     text = text,
                     type = type,
-                    dept = if (type == "common") "" else dept
+                    dept = selectedDept
                 )
             }
         } else {
@@ -237,7 +271,7 @@ class TemplateEditorActivity : AppCompatActivity() {
                 name = name,
                 text = text,
                 type = type,
-                dept = if (type == "common") "" else dept
+                dept = selectedDept
             ))
         }
 
