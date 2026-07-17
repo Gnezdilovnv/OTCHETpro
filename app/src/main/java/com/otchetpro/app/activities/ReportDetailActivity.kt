@@ -4,7 +4,6 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -79,9 +78,7 @@ class ReportDetailActivity : AppCompatActivity() {
 
     private fun findFile(reportId: Long) {
         try {
-            val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val reportsDir = File(docsDir, "OTCHETpro")
-            
+            val reportsDir = DocxGenerator.getReportsDir()
             if (reportsDir.exists()) {
                 val files = reportsDir.listFiles { file -> 
                     file.isFile && file.name.contains("Отчет_$reportId") && file.extension == "docx"
@@ -97,7 +94,6 @@ class ReportDetailActivity : AppCompatActivity() {
 
     private fun openFile() {
         if (filePath == null) {
-            // Пробуем найти файл заново
             findFile(id)
         }
         
@@ -131,7 +127,6 @@ class ReportDetailActivity : AppCompatActivity() {
     private fun sendEmail() {
         val recips = SharedPrefs.getRecipients(this)
         
-        // Если нет контактов — показываем поля для ввода
         if (recips.isEmpty()) {
             showManualEmailDialog()
             return
@@ -182,57 +177,18 @@ class ReportDetailActivity : AppCompatActivity() {
         val body = """
             Уважаемый(ая) $name!
 
-            Направляю боевое донесение:
-
-            ${r.text}
+            Направляю боевое донесение.
 
             -- 
             Сгенерировано автоматически в OTCHETpro
         """.trimIndent()
 
-        val intent = Intent(Intent.ACTION_SENDTO)
-        intent.data = Uri.parse("mailto:$email")
-        intent.putExtra(Intent.EXTRA_SUBJECT, subject)
-        intent.putExtra(Intent.EXTRA_TEXT, body)
-        startActivity(Intent.createChooser(intent, "Отправить письмо"))
-
-        // Обновляем статус
-        CoroutineScope(Dispatchers.IO).launch {
-            val db = AppDatabase.getInstance(this@ReportDetailActivity)
-            val current = db.reportDao().getById(id)
-            if (current != null) {
-                val updated = current.copy(status = "sent")
-                db.reportDao().update(updated)
-            }
-        }
-
-        tvStatus.text = "✅ Отправлен"
-        tvStatus.setBackgroundColor(0xFFDDF0E6.toInt())
-        tvStatus.setTextColor(0xFF0F6B3A.toInt())
-        tvEmailStatus.visibility = View.VISIBLE
-        Toast.makeText(this, "Письмо открыто", Toast.LENGTH_SHORT).show()
-    }
-}
-
-    private fun sendEmailWithAttachment(email: String, name: String) {
-        val r = report ?: return
-        
         // Ищем файл
         val reportsDir = DocxGenerator.getReportsDir()
         val files = reportsDir.listFiles { file -> 
             file.isFile && file.name.contains("Отчет_${r.id}") && file.extension == "docx"
         }
         val file = if (!files.isNullOrEmpty()) files[0] else null
-        
-        val subject = "Боевое донесение — ${r.templateName}"
-        val body = """
-            Уважаемый(ая) $name!
-
-            Направляю боевое донесение в прикреплённом файле.
-
-            -- 
-            Сгенерировано автоматически в OTCHETpro
-        """.trimIndent()
 
         val intent = Intent(Intent.ACTION_SEND)
         intent.type = "application/msword"
@@ -269,4 +225,6 @@ class ReportDetailActivity : AppCompatActivity() {
         tvStatus.setBackgroundColor(0xFFDDF0E6.toInt())
         tvStatus.setTextColor(0xFF0F6B3A.toInt())
         tvEmailStatus.visibility = View.VISIBLE
+        Toast.makeText(this, "Письмо открыто", Toast.LENGTH_SHORT).show()
     }
+}

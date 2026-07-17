@@ -1,5 +1,6 @@
 package com.otchetpro.app.activities
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -10,8 +11,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.otchetpro.app.R
 import com.otchetpro.app.adapters.ReportAdapter
 import com.otchetpro.app.data.*
+import com.otchetpro.app.utils.DocxGenerator
 import com.otchetpro.app.utils.SharedPrefs
 import kotlinx.coroutines.*
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -39,9 +42,14 @@ class MainActivity : AppCompatActivity() {
         dept = SharedPrefs.getDept(this)
         updateUI()
 
-        adapter = ReportAdapter { report ->
-            startActivity(Intent(this, ReportDetailActivity::class.java).putExtra("id", report.id))
-        }
+        adapter = ReportAdapter(
+            onItemClick = { report ->
+                startActivity(Intent(this, ReportDetailActivity::class.java).putExtra("id", report.id))
+            },
+            onLongClick = { report ->
+                showDeleteDialog(report)
+            }
+        )
         rv.layoutManager = LinearLayoutManager(this)
         rv.adapter = adapter
 
@@ -102,6 +110,28 @@ class MainActivity : AppCompatActivity() {
         loadReports()
     }
 
+    private fun showDeleteDialog(report: Report) {
+        AlertDialog.Builder(this)
+            .setTitle("Удалить отчет")
+            .setMessage("Удалить отчет \"${report.templateName}\"?")
+            .setPositiveButton("Удалить") { _, _ ->
+                CoroutineScope(Dispatchers.IO).launch {
+                    val db = AppDatabase.getInstance(this@MainActivity)
+                    db.reportDao().delete(report.id)
+                    // Удаляем файл
+                    val reportsDir = DocxGenerator.getReportsDir()
+                    val file = File(reportsDir, "Отчет_${report.id}.docx")
+                    if (file.exists()) file.delete()
+                    withContext(Dispatchers.Main) {
+                        loadReports()
+                        Toast.makeText(this@MainActivity, "✅ Отчет удален", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
     private fun loadReports() {
         CoroutineScope(Dispatchers.IO).launch {
             val all = AppDatabase.getInstance(this@MainActivity).reportDao().getByDept(dept)
@@ -130,26 +160,3 @@ class MainActivity : AppCompatActivity() {
         loadReports()
     }
 }
-
-    private fun setupLongClick() {
-        adapter.setLongClickListener { report ->
-            AlertDialog.Builder(this)
-                .setTitle("Удалить отчет")
-                .setMessage("Удалить отчет \"${report.templateName}\"?")
-                .setPositiveButton("Удалить") { _, _ ->
-                    CoroutineScope(Dispatchers.IO).launch {
-                        val db = AppDatabase.getInstance(this@MainActivity)
-                        db.reportDao().delete(report.id)
-                        // Удаляем файл
-                        val file = File(DocxGenerator.getReportsDir(), "Отчет_${report.id}.docx")
-                        if (file.exists()) file.delete()
-                        withContext(Dispatchers.Main) {
-                            loadReports()
-                            Toast.makeText(this@MainActivity, "✅ Отчет удален", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-                .setNegativeButton("Отмена", null)
-                .show()
-        }
-    }
