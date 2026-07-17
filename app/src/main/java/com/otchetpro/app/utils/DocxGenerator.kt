@@ -142,3 +142,31 @@ object DocxGenerator {
         
         return table
     }
+
+    // Создание таблицы в DOCX
+    fun createTable(doc: XWPFDocument, headers: List<String>, rows: List<List<String>>): XWPFTable {
+        val table = doc.createTable(rows.size + 1, headers.size)
+        
+        // Заголовки
+        val headerRow = table.getRow(0)
+        headers.forEachIndexed { i, header ->
+            val cell = headerRow.getCell(i)
+            val p = cell.paragraphs[0]
+            val r = p.createRun()
+            r.setText(header)
+            r.isBold = true
+        }
+        
+        // Данные
+        rows.forEachIndexed { rowIndex, row ->
+            val tableRow = table.getRow(rowIndex + 1)
+            row.forEachIndexed { colIndex, value ->
+                val cell = tableRow.getCell(colIndex)
+                val p = cell.paragraphs[0]
+                val r = p.createRun()
+                r.setText(value)
+            }
+        }
+        
+        return table
+    }

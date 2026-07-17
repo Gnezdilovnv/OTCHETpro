@@ -355,3 +355,39 @@ class TemplateEditorActivity : AppCompatActivity() {
             }
             .show()
     }
+
+    // Автодополнение переменных при вводе {{
+    private fun setupAutoComplete() {
+        etText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val text = s.toString()
+                val cursorPos = etText.selectionStart
+                // Ищем последний ввод {{
+                val lastOpen = text.lastIndexOf("{{", cursorPos)
+                if (lastOpen != -1 && lastOpen + 2 == cursorPos) {
+                    showAutoCompleteDialog()
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+    }
+
+    private fun showAutoCompleteDialog() {
+        val allVars = mutableListOf<String>()
+        allVars.addAll(listOf("Подразделение", "Расчет", "Соисполнители"))
+        allVars.addAll(allVariables.map { it.name })
+        
+        AlertDialog.Builder(this)
+            .setTitle("Выберите переменную")
+            .setItems(allVars.toTypedArray()) { _, which ->
+                val varName = allVars[which]
+                val text = etText.text.toString()
+                val cursorPos = etText.selectionStart
+                // Заменяем {{ на {{ИмяПеременной}}
+                val newText = text.substring(0, cursorPos - 2) + "{{$varName}}" + text.substring(cursorPos)
+                etText.setText(newText)
+                etText.setSelection(cursorPos - 2 + "{{$varName}}".length)
+            }
+            .show()
+    }
