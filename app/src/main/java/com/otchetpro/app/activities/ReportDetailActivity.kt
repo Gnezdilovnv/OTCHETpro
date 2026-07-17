@@ -4,9 +4,11 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import com.otchetpro.app.R
 import com.otchetpro.app.data.*
 import com.otchetpro.app.utils.*
@@ -25,6 +27,7 @@ class ReportDetailActivity : AppCompatActivity() {
     private lateinit var tvReportDate: TextView
     private var id: Long = 0
     private var report: Report? = null
+    private var filePath: String? = null
 
     override fun onCreate(s: Bundle?) {
         super.onCreate(s)
@@ -41,7 +44,7 @@ class ReportDetailActivity : AppCompatActivity() {
         id = intent.getLongExtra("id", 0)
 
         btnClose.setOnClickListener { finish() }
-        btnSend.setOnClickListener { send() }
+        btnSend.setOnClickListener { sendEmail() }
         btnShare.setOnClickListener {
             val i = Intent(Intent.ACTION_SEND)
             i.type = "text/plain"
@@ -66,59 +69,147 @@ class ReportDetailActivity : AppCompatActivity() {
                     if (r.status == "sent") tvEmailStatus.visibility = View.VISIBLE
                     else tvEmailStatus.visibility = View.GONE
                     tvReportDate.text = "Создан: ${java.text.SimpleDateFormat("dd.MM.yyyy HH:mm").format(r.createdAt)}"
+                    
+                    // Ищем файл
+                    findFile(r.id)
                 }
             }
         }
     }
 
-    private fun openFile() {
-        val dir = DocxGenerator.getDir()
-        val files = dir.listFiles()
-        var foundFile: File? = null
-        files?.forEach { 
-            if (it.name.contains(id.toString())) foundFile = it
-        }
-        val found = foundFile
-        if (found != null && found.exists()) {
-            val uri = Uri.fromFile(found)
-            val i = Intent(Intent.ACTION_VIEW)
-            i.setDataAndType(uri, "application/msword")
-            i.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            startActivity(Intent.createChooser(i, "Открыть файл"))
-        } else {
-            Toast.makeText(this, "Файл не найден", Toast.LENGTH_SHORT).show()
+    private fun findFile(reportId: Long) {
+        try {
+            val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val reportsDir = File(docsDir, "OTCHETpro")
+            
+            if (reportsDir.exists()) {
+                val files = reportsDir.listFiles { file -> 
+                    file.isFile && file.name.contains("Отчет_$reportId") && file.extension == "docx"
+                }
+                if (!files.isNullOrEmpty()) {
+                    filePath = files[0].absolutePath
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
-    private fun send() {
-        val recips = SharedPrefs.getRecipients(this)
-        if (recips.isEmpty()) { 
-            Toast.makeText(this, "Нет получателей", Toast.LENGTH_SHORT).show()
-            return 
+    private fun openFile() {
+        if (filePath == null) {
+            // Пробуем найти файл заново
+            findFile(id)
         }
+        
+        if (filePath == null) {
+            Toast.makeText(this, "Файл не найден. Попробуйте пересохранить отчет.", Toast.LENGTH_LONG).show()
+            return
+        }
+        
+        try {
+            val file = File(filePath)
+            if (!file.exists()) {
+                Toast.makeText(this, "Файл не существует", Toast.LENGTH_SHORT).show()
+                return
+            }
+            
+            val uri = FileProvider.getUriForFile(
+                this,
+                "${packageName}.fileprovider",
+                file
+            )
+            
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.setDataAndType(uri, "application/msword")
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            startActivity(Intent.createChooser(intent, "Открыть файл"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Ошибка открытия: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun sendEmail() {
+        val recips = SharedPrefs.getRecipients(this)
+        
+        // Если нет контактов — показываем поля для ввода
+        if (recips.isEmpty()) {
+            showManualEmailDialog()
+            return
+        }
+        
         val names = recips.map { it.name }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle("Выберите получателя")
             .setItems(names) { _, i ->
                 val r = recips[i]
-                val intent = Intent(Intent.ACTION_SENDTO)
-                intent.data = Uri.parse("mailto:${r.email}")
-                intent.putExtra(Intent.EXTRA_SUBJECT, "Боевое донесение — ${report?.templateName}")
-                intent.putExtra(Intent.EXTRA_TEXT, report?.text)
-                startActivity(Intent.createChooser(intent, "Отправить"))
-
-                CoroutineScope(Dispatchers.IO).launch {
-                    report?.let { 
-                        val updated = it.copy(status = "sent")
-                        AppDatabase.getInstance(this@ReportDetailActivity).reportDao().update(updated)
-                    }
-                }
-                tvStatus.text = "✅ Отправлен"
-                tvStatus.setBackgroundColor(0xFFDDF0E6.toInt())
-                tvStatus.setTextColor(0xFF0F6B3A.toInt())
-                tvEmailStatus.visibility = View.VISIBLE
-                Toast.makeText(this, "Письмо открыто", Toast.LENGTH_SHORT).show()
+                sendEmailTo(r.email, r.name)
             }
+            .setPositiveButton("Ввести вручную") { _, _ -> showManualEmailDialog() }
+            .setNegativeButton("Отмена", null)
             .show()
+    }
+
+    private fun showManualEmailDialog() {
+        val nameInput = EditText(this).apply { hint = "ФИО получателя" }
+        val emailInput = EditText(this).apply { hint = "Email получателя" }
+        
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(16, 16, 16, 16)
+            addView(nameInput)
+            addView(emailInput)
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("Введите получателя")
+            .setView(container)
+            .setPositiveButton("Отправить") { _, _ ->
+                val name = nameInput.text.toString().trim()
+                val email = emailInput.text.toString().trim()
+                if (name.isNotEmpty() && email.isNotEmpty() && email.contains("@")) {
+                    sendEmailTo(email, name)
+                } else {
+                    Toast.makeText(this, "Введите корректные данные", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    private fun sendEmailTo(email: String, name: String) {
+        val r = report ?: return
+        val subject = "Боевое донесение — ${r.templateName}"
+        val body = """
+            Уважаемый(ая) $name!
+
+            Направляю боевое донесение:
+
+            ${r.text}
+
+            -- 
+            Сгенерировано автоматически в OTCHETpro
+        """.trimIndent()
+
+        val intent = Intent(Intent.ACTION_SENDTO)
+        intent.data = Uri.parse("mailto:$email")
+        intent.putExtra(Intent.EXTRA_SUBJECT, subject)
+        intent.putExtra(Intent.EXTRA_TEXT, body)
+        startActivity(Intent.createChooser(intent, "Отправить письмо"))
+
+        // Обновляем статус
+        CoroutineScope(Dispatchers.IO).launch {
+            val db = AppDatabase.getInstance(this@ReportDetailActivity)
+            val current = db.reportDao().getById(id)
+            if (current != null) {
+                val updated = current.copy(status = "sent")
+                db.reportDao().update(updated)
+            }
+        }
+
+        tvStatus.text = "✅ Отправлен"
+        tvStatus.setBackgroundColor(0xFFDDF0E6.toInt())
+        tvStatus.setTextColor(0xFF0F6B3A.toInt())
+        tvEmailStatus.visibility = View.VISIBLE
+        Toast.makeText(this, "Письмо открыто", Toast.LENGTH_SHORT).show()
     }
 }

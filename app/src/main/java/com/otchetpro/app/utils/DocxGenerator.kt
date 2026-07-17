@@ -16,15 +16,31 @@ object DocxGenerator {
             r.fontSize = 12
             r.fontFamily = "Times New Roman"
 
-            val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "OTCHETpro")
-            if (!dir.exists()) dir.mkdirs()
+            // Ищем папку "Отчеты" в Documents
+            val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val reportsDir = File(docsDir, "OTCHETpro")
+            
+            // Если папки нет — создаём
+            if (!reportsDir.exists()) {
+                reportsDir.mkdirs()
+            }
 
-            val f = File(dir, fileName)
+            val f = File(reportsDir, fileName)
             FileOutputStream(f).use { doc.write(it) }
             doc.close()
             f
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
-    fun getDir() = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "OTCHETpro")
+    fun getReportsDir(): File {
+        val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+        val reportsDir = File(docsDir, "OTCHETpro")
+        if (!reportsDir.exists()) {
+            reportsDir.mkdirs()
+        }
+        return reportsDir
+    }
 }
