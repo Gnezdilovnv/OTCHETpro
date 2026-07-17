@@ -25,6 +25,7 @@
         <activity android:name=".activities.CreateReportActivity" />
         <activity android:name=".activities.ReportDetailActivity" />
         <activity android:name=".activities.SettingsActivity" />
+        <activity android:name=".activities.TemplateEditorActivity" />
 
     </application>
 

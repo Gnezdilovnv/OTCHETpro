@@ -36,3 +36,15 @@ object SharedPrefs {
     }
     fun saveSubDepts(c: Context, l: List<String>) { c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("subs", gson.toJson(l)).apply() }
 }
+
+    fun saveDeptUnit(c: Context, dept: String, unit: String) {
+        c.getSharedPreferences(P, Context.MODE_PRIVATE)
+            .edit()
+            .putString("dept_unit_$dept", unit)
+            .apply()
+    }
+
+    fun getDeptUnit(c: Context, dept: String): String? {
+        return c.getSharedPreferences(P, Context.MODE_PRIVATE)
+            .getString("dept_unit_$dept", null)
+    }

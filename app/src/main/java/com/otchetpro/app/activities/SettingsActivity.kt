@@ -1,25 +1,43 @@
 package com.otchetpro.app.activities
 
 import android.app.AlertDialog
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.otchetpro.app.R
 import com.otchetpro.app.data.*
 import com.otchetpro.app.utils.SharedPrefs
+import java.io.File
+import java.io.FileOutputStream
+import java.io.FileReader
 import java.util.*
 
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var tvDeptInfo: TextView
+    private lateinit var tvSettingsInfo: TextView
+    private lateinit var tvSettingsTag: TextView
+    
     private lateinit var llSubDepts: LinearLayout
     private lateinit var llTemplates: LinearLayout
     private lateinit var llVars: LinearLayout
     private lateinit var llRecipients: LinearLayout
+    
     private lateinit var etSubDeptNew: EditText
     private lateinit var etRecipientName: EditText
     private lateinit var etRecipientEmail: EditText
+    
+    private lateinit var btnImport: Button
+    private lateinit var btnExport: Button
+    private lateinit var btnTemplateDownload: Button
 
     private var dept = ""
     private var subDepts = mutableListOf<String>()
@@ -32,22 +50,31 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         tvDeptInfo = findViewById(R.id.tv_dept_info_settings)
+        tvSettingsInfo = findViewById(R.id.tv_settings_info)
+        tvSettingsTag = findViewById(R.id.tv_settings_tag)
+        
         llSubDepts = findViewById(R.id.ll_subdepts_list)
         llTemplates = findViewById(R.id.ll_templates_list)
         llVars = findViewById(R.id.ll_vars_list)
         llRecipients = findViewById(R.id.ll_recipients_list)
+        
         etSubDeptNew = findViewById(R.id.et_subdept_new)
         etRecipientName = findViewById(R.id.et_recipient_name)
         etRecipientEmail = findViewById(R.id.et_recipient_email)
+        
+        btnImport = findViewById(R.id.btn_import)
+        btnExport = findViewById(R.id.btn_export)
+        btnTemplateDownload = findViewById(R.id.btn_template_download)
 
         findViewById<Button>(R.id.btn_close_settings).setOnClickListener { finish() }
         findViewById<Button>(R.id.btn_subdept_add).setOnClickListener { addSubDept() }
         findViewById<Button>(R.id.btn_recipient_add).setOnClickListener { addRecipient() }
-        findViewById<Button>(R.id.btn_template_add).setOnClickListener { addTemplate() }
+        findViewById<Button>(R.id.btn_template_add).setOnClickListener { openTemplateEditor() }
         findViewById<Button>(R.id.btn_var_add).setOnClickListener { addVariable() }
-        findViewById<Button>(R.id.btn_export).setOnClickListener { exportSettings() }
-        findViewById<Button>(R.id.btn_import).setOnClickListener { importSettings() }
-        findViewById<Button>(R.id.btn_template_download).setOnClickListener { downloadTemplate() }
+        
+        btnExport.setOnClickListener { exportSettings() }
+        btnImport.setOnClickListener { importSettings() }
+        btnTemplateDownload.setOnClickListener { downloadTemplate() }
 
         // Аккордеоны
         setupAccordion(R.id.accordion_dept_header, R.id.accordion_dept_body)
@@ -57,13 +84,42 @@ class SettingsActivity : AppCompatActivity() {
         setupAccordion(R.id.accordion_recipients_header, R.id.accordion_recipients_body)
         setupAccordion(R.id.accordion_export_header, R.id.accordion_export_body)
 
-        // Кнопки смены отдела
-        findViewById<Button>(R.id.dept_bpla).setOnClickListener { changeDept("БпЛА") }
-        findViewById<Button>(R.id.dept_minomet).setOnClickListener { changeDept("Миномет") }
-        findViewById<Button>(R.id.dept_artillery).setOnClickListener { changeDept("Артиллерия") }
-        findViewById<Button>(R.id.dept_tanks).setOnClickListener { changeDept("Танки") }
+        // Кнопки смены отдела — РЕДАКТИРУЕМЫЕ
+        findViewById<Button>(R.id.dept_bpla).setOnClickListener { 
+            showEditDeptDialog("БпЛА", "ПВР №2 «Пчела»")
+        }
+        findViewById<Button>(R.id.dept_minomet).setOnClickListener { 
+            showEditDeptDialog("Миномет", "расчет миномета «ТИГР»")
+        }
+        findViewById<Button>(R.id.dept_artillery).setOnClickListener { 
+            showEditDeptDialog("Артиллерия", "152-мм гаубица «Гиацинт»")
+        }
+        findViewById<Button>(R.id.dept_tanks).setOnClickListener { 
+            showEditDeptDialog("Танки", "танковый взвод Т-72")
+        }
 
         loadData()
+    }
+
+    private fun showEditDeptDialog(deptName: String, currentUnit: String) {
+        val input = EditText(this).apply { 
+            setText(currentUnit)
+            hint = "Название подразделения"
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Редактировать: $deptName")
+            .setView(input)
+            .setPositiveButton("Сохранить") { _, _ ->
+                val newName = input.text.toString().trim()
+                if (newName.isNotEmpty()) {
+                    // Сохраняем в SharedPrefs
+                    SharedPrefs.saveDeptUnit(this, deptName, newName)
+                    loadData()
+                    Toast.makeText(this, "✅ Обновлено: $newName", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun setupAccordion(headerId: Int, bodyId: Int) {
@@ -95,12 +151,35 @@ class SettingsActivity : AppCompatActivity() {
         variables = SharedPrefs.getVariables(this).filter { it.dept == dept || it.typeGlobal == "common" }.toMutableList()
         recipients = SharedPrefs.getRecipients(this).toMutableList()
 
-        // Подподразделения
+        // Подподразделения — редактируемые
         llSubDepts.removeAllViews()
         subDepts.forEachIndexed { i, name ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
-            val tv = TextView(this).apply { text = name; layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f) }
-            val btn = Button(this).apply { 
+            val tv = TextView(this).apply { 
+                text = name
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                textSize = 14f
+            }
+            val editBtn = Button(this).apply {
+                text = "✎"
+                setOnClickListener {
+                    val input = EditText(this@SettingsActivity).apply { setText(name) }
+                    AlertDialog.Builder(this@SettingsActivity)
+                        .setTitle("Редактировать подподразделение")
+                        .setView(input)
+                        .setPositiveButton("Сохранить") { _, _ ->
+                            val newName = input.text.toString().trim()
+                            if (newName.isNotEmpty()) {
+                                subDepts[i] = newName
+                                SharedPrefs.saveSubDepts(this@SettingsActivity, subDepts)
+                                loadData()
+                            }
+                        }
+                        .setNegativeButton("Отмена", null)
+                        .show()
+                }
+            }
+            val deleteBtn = Button(this).apply {
                 text = "✕"
                 setOnClickListener {
                     subDepts.removeAt(i)
@@ -109,25 +188,30 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
             row.addView(tv)
-            row.addView(btn)
+            row.addView(editBtn)
+            row.addView(deleteBtn)
             llSubDepts.addView(row)
         }
 
-        // Шаблоны
+        // Шаблоны — редактируемые
         llTemplates.removeAllViews()
         templates.forEachIndexed { i, t ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 8, 0, 8) }
             val nameTv = TextView(this).apply { text = t.name; textSize = 14f; typeface = android.graphics.Typeface.DEFAULT_BOLD }
             row.addView(nameTv)
-            val previewTv = TextView(this).apply { text = t.text.take(60) + if (t.text.length > 60) "..." else ""; textSize = 12f; setTextColor(0xFF6F85A5.toInt()) }
+            val previewTv = TextView(this).apply { 
+                text = t.text.take(60) + if (t.text.length > 60) "..." else ""
+                textSize = 12f
+                setTextColor(0xFF6F85A5.toInt())
+            }
             row.addView(previewTv)
             val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             val editBtn = Button(this).apply { 
-                text = "✎"
-                setOnClickListener { editTemplate(i) }
+                text = "✎ Редактировать"
+                setOnClickListener { openTemplateEditor(t) }
             }
             val deleteBtn = Button(this).apply { 
-                text = "✕"
+                text = "✕ Удалить"
                 setOnClickListener {
                     templates.removeAt(i)
                     SharedPrefs.saveTemplates(this@SettingsActivity, templates)
@@ -140,7 +224,7 @@ class SettingsActivity : AppCompatActivity() {
             llTemplates.addView(row)
         }
 
-        // Переменные (все 23 типа)
+        // Переменные
         llVars.removeAllViews()
         variables.forEachIndexed { i, v ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
@@ -148,11 +232,15 @@ class SettingsActivity : AppCompatActivity() {
                 text = v.name + if (v.required) " *" else ""
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
-            val typeTv = TextView(this).apply { text = " (${VariableTypes.displayNames[v.type] ?: v.type})"; textSize = 11f; setTextColor(0xFF6F85A5.toInt()) }
+            val typeTv = TextView(this).apply { 
+                text = " (${VariableTypes.displayNames[v.type] ?: v.type})"
+                textSize = 11f
+                setTextColor(0xFF6F85A5.toInt())
+            }
             val container = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             container.addView(tv)
             container.addView(typeTv)
-            val btn = Button(this).apply { 
+            val deleteBtn = Button(this).apply { 
                 text = "✕"
                 setOnClickListener {
                     variables.removeAt(i)
@@ -161,7 +249,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
             row.addView(container)
-            row.addView(btn)
+            row.addView(deleteBtn)
             llVars.addView(row)
         }
 
@@ -173,7 +261,7 @@ class SettingsActivity : AppCompatActivity() {
                 text = "${r.name} (${r.email})"
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
-            val btn = Button(this).apply { 
+            val deleteBtn = Button(this).apply { 
                 text = "✕"
                 setOnClickListener {
                     recipients.removeAt(i)
@@ -182,13 +270,24 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
             row.addView(tv)
-            row.addView(btn)
+            row.addView(deleteBtn)
             llRecipients.addView(row)
         }
 
-        findViewById<TextView>(R.id.tv_settings_info).text = 
+        val unit = SharedPrefs.getDeptUnit(this, dept) ?: getDefaultUnit(dept)
+        tvSettingsInfo.text = 
             "${subDepts.size} подподразделений · ${templates.size} шаблонов · ${variables.size} переменных"
-        findViewById<TextView>(R.id.tv_settings_tag).text = dept
+        tvSettingsTag.text = "$dept — $unit"
+    }
+
+    private fun getDefaultUnit(dept: String): String {
+        return when(dept) {
+            "БпЛА" -> "ПВР №2 «Пчела»"
+            "Миномет" -> "расчет миномета «ТИГР»"
+            "Артиллерия" -> "152-мм гаубица «Гиацинт»"
+            "Танки" -> "танковый взвод Т-72"
+            else -> ""
+        }
     }
 
     private fun addSubDept() {
@@ -214,41 +313,14 @@ class SettingsActivity : AppCompatActivity() {
         Toast.makeText(this, "✅ Добавлен", Toast.LENGTH_SHORT).show()
     }
 
-    private fun addTemplate() {
-        val nm = EditText(this).apply { hint = "Название" }
-        val tx = EditText(this).apply { hint = "Текст с {{Переменная}}"; minLines = 4 }
-        val ct = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(nm); addView(tx) }
-        AlertDialog.Builder(this).setTitle("Добавить шаблон").setView(ct)
-            .setPositiveButton("OK") { _, _ ->
-                val name = nm.text.toString().trim()
-                val text = tx.text.toString().trim()
-                if (name.isEmpty() || text.isEmpty()) { Toast.makeText(this, "Заполните поля", Toast.LENGTH_SHORT).show(); return@setPositiveButton }
-                templates.add(Template(UUID.randomUUID().toString(), name, text, "own", dept))
-                SharedPrefs.saveTemplates(this, templates)
-                loadData()
-                Toast.makeText(this, "✅ Шаблон добавлен", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
-    }
-
-    private fun editTemplate(index: Int) {
-        val t = templates[index]
-        val nm = EditText(this).apply { setText(t.name) }
-        val tx = EditText(this).apply { setText(t.text); minLines = 4 }
-        val ct = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(nm); addView(tx) }
-        AlertDialog.Builder(this).setTitle("Редактировать шаблон").setView(ct)
-            .setPositiveButton("OK") { _, _ ->
-                val name = nm.text.toString().trim()
-                val text = tx.text.toString().trim()
-                if (name.isEmpty() || text.isEmpty()) { Toast.makeText(this, "Заполните поля", Toast.LENGTH_SHORT).show(); return@setPositiveButton }
-                templates[index] = t.copy(name = name, text = text)
-                SharedPrefs.saveTemplates(this, templates)
-                loadData()
-                Toast.makeText(this, "✅ Шаблон обновлен", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
+    private fun openTemplateEditor(template: Template? = null) {
+        val intent = Intent(this, TemplateEditorActivity::class.java)
+        template?.let { 
+            intent.putExtra("template_id", it.id)
+            intent.putExtra("template_name", it.name)
+            intent.putExtra("template_text", it.text)
+        }
+        startActivity(intent)
     }
 
     private fun addVariable() {
@@ -281,17 +353,25 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun exportSettings() {
-        val data = mapOf(
-            "dept" to dept,
-            "subDepts" to subDepts,
-            "templates" to templates,
-            "variables" to variables,
-            "recipients" to recipients
-        )
         try {
-            val json = com.google.gson.Gson().toJson(data)
-            val file = java.io.File(getExternalFilesDir(null), "настройки_${dept}.json")
-            java.io.FileOutputStream(file).use { it.write(json.toByteArray()) }
+            val reportsDir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+                "OTCHETpro/Настройки"
+            )
+            if (!reportsDir.exists()) reportsDir.mkdirs()
+
+            val data = mapOf(
+                "dept" to dept,
+                "subDepts" to subDepts,
+                "templates" to templates,
+                "variables" to variables,
+                "recipients" to recipients,
+                "exportedAt" to System.currentTimeMillis()
+            )
+            val json = GsonBuilder().setPrettyPrinting().create().toJson(data)
+            val file = File(reportsDir, "настройки_${dept}_${System.currentTimeMillis()}.json")
+            FileOutputStream(file).use { it.write(json.toByteArray()) }
+            
             Toast.makeText(this, "✅ Выгружено: ${file.absolutePath}", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "❌ Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -299,23 +379,164 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun importSettings() {
-        Toast.makeText(this, "Выберите JSON-файл с настройками", Toast.LENGTH_SHORT).show()
+        try {
+            val reportsDir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+                "OTCHETpro/Настройки"
+            )
+            if (!reportsDir.exists()) {
+                Toast.makeText(this, "Папка с настройками не найдена", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val files = reportsDir.listFiles { file -> file.extension == "json" }
+            if (files.isNullOrEmpty()) {
+                Toast.makeText(this, "Нет файлов настроек", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val fileNames = files.map { it.name }.toTypedArray()
+            AlertDialog.Builder(this)
+                .setTitle("Выберите файл для импорта")
+                .setItems(fileNames) { _, which ->
+                    try {
+                        val file = files[which]
+                        val json = FileReader(file).readText()
+                        val data = Gson().fromJson(json, Map::class.java)
+                        
+                        // Проверяем отдел
+                        val importedDept = data["dept"] as? String
+                        if (importedDept != null && importedDept != dept) {
+                            AlertDialog.Builder(this)
+                                .setTitle("Внимание")
+                                .setMessage("Файл для отдела $importedDept, а вы в $dept. Импортировать?")
+                                .setPositiveButton("Да") { _, _ -> doImport(data) }
+                                .setNegativeButton("Нет", null)
+                                .show()
+                        } else {
+                            doImport(data)
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(this, "❌ Ошибка импорта: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "❌ Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun doImport(data: Map<*, *>) {
+        try {
+            val gson = Gson()
+            
+            @Suppress("UNCHECKED_CAST")
+            val importedSubDepts = data["subDepts"] as? List<String>
+            if (importedSubDepts != null) {
+                subDepts.clear()
+                subDepts.addAll(importedSubDepts)
+                SharedPrefs.saveSubDepts(this, subDepts)
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            val importedTemplates = data["templates"] as? List<Map<String, Any>>
+            if (importedTemplates != null) {
+                val newTemplates = importedTemplates.map { 
+                    Template(
+                        id = UUID.randomUUID().toString(),
+                        name = it["name"] as? String ?: "",
+                        text = it["text"] as? String ?: "",
+                        type = "own",
+                        dept = dept
+                    )
+                }
+                templates.addAll(newTemplates)
+                SharedPrefs.saveTemplates(this, templates)
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            val importedVariables = data["variables"] as? List<Map<String, Any>>
+            if (importedVariables != null) {
+                val newVariables = importedVariables.map {
+                    Variable(
+                        id = UUID.randomUUID().toString(),
+                        name = it["name"] as? String ?: "",
+                        type = it["type"] as? String ?: "text",
+                        required = it["required"] as? Boolean ?: false,
+                        typeGlobal = "own",
+                        dept = dept
+                    )
+                }
+                variables.addAll(newVariables)
+                SharedPrefs.saveVariables(this, variables)
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            val importedRecipients = data["recipients"] as? List<Map<String, String>>
+            if (importedRecipients != null) {
+                val newRecipients = importedRecipients.map {
+                    Recipient(
+                        id = UUID.randomUUID().toString(),
+                        name = it["name"] ?: "",
+                        email = it["email"] ?: "",
+                        dept = dept
+                    )
+                }
+                recipients.addAll(newRecipients)
+                SharedPrefs.saveRecipients(this, recipients)
+            }
+
+            loadData()
+            Toast.makeText(this, "✅ Импорт выполнен успешно!", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "❌ Ошибка импорта: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun downloadTemplate() {
-        val template = mapOf(
-            "_comment" to "Шаблон настроек OTCHETpro",
-            "dept" to "НАЗВАНИЕ_ОТДЕЛА",
-            "subDepts" to listOf("Подразделение 1", "Подразделение 2"),
-            "templates" to listOf(mapOf("name" to "Название", "text" to "Текст с {{Переменная}}")),
-            "variables" to listOf(mapOf("name" to "Переменная", "type" to "text", "required" to true)),
-            "recipients" to listOf(mapOf("name" to "ФИО", "email" to "email@domain.ru"))
-        )
         try {
-            val json = com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(template)
-            val file = java.io.File(getExternalFilesDir(null), "шаблон_настроек.json")
-            java.io.FileOutputStream(file).use { it.write(json.toByteArray()) }
-            Toast.makeText(this, "✅ Шаблон скачан", Toast.LENGTH_LONG).show()
+            val reportsDir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+                "OTCHETpro/Настройки"
+            )
+            if (!reportsDir.exists()) reportsDir.mkdirs()
+
+            val template = mapOf(
+                "_comment" to "Шаблон настроек OTCHETpro",
+                "dept" to "НАЗВАНИЕ_ОТДЕЛА (БпЛА, Миномет, Артиллерия, Танки)",
+                "subDepts" to listOf("Подразделение 1", "Подразделение 2"),
+                "templates" to listOf(
+                    mapOf(
+                        "name" to "Название шаблона",
+                        "text" to "Текст с {{Переменная}} для подстановки. Для соисполнителей: {{#Соисполнители}}...{{Соисполнители}}...{{/Соисполнители}}"
+                    )
+                ),
+                "variables" to listOf(
+                    mapOf(
+                        "name" to "Название переменной",
+                        "type" to "text",
+                        "required" to true
+                    )
+                ),
+                "recipients" to listOf(
+                    mapOf("name" to "ФИО получателя", "email" to "email@domain.ru")
+                ),
+                "_instructions" to listOf(
+                    "1. Замените значения в кавычках на свои",
+                    "2. subDepts — список подподразделений (соисполнителей)",
+                    "3. templates — текст шаблона с {{Переменная}}",
+                    "4. variables — переменные, используемые в шаблоне",
+                    "5. recipients — получателей",
+                    "6. Сохраните файл и загрузите в приложение через 'Загрузить настройки'"
+                )
+            )
+            
+            val json = GsonBuilder().setPrettyPrinting().create().toJson(template)
+            val file = File(reportsDir, "шаблон_настроек.json")
+            FileOutputStream(file).use { it.write(json.toByteArray()) }
+            
+            Toast.makeText(this, "✅ Шаблон скачан: ${file.absolutePath}", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "❌ Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
         }
