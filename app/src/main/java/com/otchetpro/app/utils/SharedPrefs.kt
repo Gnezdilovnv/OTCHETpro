@@ -48,4 +48,17 @@ object SharedPrefs {
     fun getDeptUnit(c: Context, dept: String): String? {
         return c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("dept_unit_$dept", null)
     }
+
+    // Получить все расчеты (переменные "Расчет" из всех подразделений)
+    fun getAllUnits(c: Context): List<Pair<String, String>> {
+        val allVars = getVariables(c)
+        val unitVars = allVars.filter { it.name == "Расчет" && it.type == "select" }
+        val result = mutableListOf<Pair<String, String>>()
+        unitVars.forEach { v ->
+            v.options.forEach { option ->
+                result.add(Pair(v.dept, option))
+            }
+        }
+        return result
+    }
 }

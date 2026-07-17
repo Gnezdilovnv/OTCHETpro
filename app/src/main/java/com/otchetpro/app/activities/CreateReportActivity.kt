@@ -1,12 +1,11 @@
 package com.otchetpro.app.activities
 
 import android.os.Bundle
-import android.text.Spannable
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.otchetpro.app.R
 import com.otchetpro.app.data.*
 import com.otchetpro.app.utils.*
@@ -22,6 +21,8 @@ class CreateReportActivity : AppCompatActivity() {
     private lateinit var btnClose: Button
     private lateinit var linearVariables: LinearLayout
     private lateinit var tvVarCount: TextView
+    private lateinit var rvSubDepts: RecyclerView
+    private lateinit var tvSubDeptsHint: TextView
     
     private var dept = ""
     private val variableValues = mutableMapOf<String, String>()
@@ -30,7 +31,8 @@ class CreateReportActivity : AppCompatActivity() {
     private var templates = listOf<Template>()
     private var allVariables = listOf<Variable>()
     private var allDepts = listOf<String>()
-    private var allVariableViews = mutableListOf<Pair<Variable, View>>()
+    private var selectedSubDepts = mutableListOf<String>()
+    private lateinit var subDeptAdapter: SubDeptAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +46,8 @@ class CreateReportActivity : AppCompatActivity() {
         btnClose = findViewById(R.id.btn_close_create)
         linearVariables = findViewById(R.id.linear_variables)
         tvVarCount = findViewById(R.id.tv_var_count)
+        rvSubDepts = findViewById(R.id.rv_subdepts)
+        tvSubDeptsHint = findViewById(R.id.tv_subdepts_hint)
         
         dept = SharedPrefs.getDept(this)
         allDepts = SharedPrefs.getDepts(this)
@@ -51,6 +55,7 @@ class CreateReportActivity : AppCompatActivity() {
         setupDeptSpinner()
         setupUnitSpinner()
         setupTemplateSpinner()
+        setupSubDepts()
         
         allVariables = SharedPrefs.getVariables(this).filter { 
             it.dept == dept || it.typeGlobal == "common" || it.typeGlobal == "dept"
@@ -120,9 +125,36 @@ class CreateReportActivity : AppCompatActivity() {
         spinnerTemplate.adapter = adapter
     }
 
+    // ============================================================
+    // СОИСПОЛНИТЕЛИ — ПОДТЯГИВАЮТСЯ ИЗ ВСЕХ ПОДРАЗДЕЛЕНИЙ
+    // ============================================================
+    private fun setupSubDepts() {
+        val allUnits = SharedPrefs.getAllUnits(this)
+        // Группируем по подразделению
+        val grouped = allUnits.groupBy { it.first }
+        
+        val items = grouped.flatMap { (deptName, units) ->
+            units.map { "${deptName}: ${it.second}" }
+        }
+        
+        if (items.isNotEmpty()) {
+            rvSubDepts.visibility = View.VISIBLE
+            tvSubDeptsHint.visibility = View.VISIBLE
+            subDeptAdapter = SubDeptAdapter(items, selectedSubDepts) { updated ->
+                selectedSubDepts = updated
+                tvSubDeptsHint.text = "Выбрано: ${selectedSubDepts.size} соисполнителей"
+                updatePreview()
+            }
+            rvSubDepts.layoutManager = LinearLayoutManager(this)
+            rvSubDepts.adapter = subDeptAdapter
+        } else {
+            rvSubDepts.visibility = View.GONE
+            tvSubDeptsHint.visibility = View.GONE
+        }
+    }
+
     private fun generateVariableFields() {
         linearVariables.removeAllViews()
-        allVariableViews.clear()
         
         allVariables.forEach { variable ->
             if (variable.name == "Расчет") return@forEach
@@ -220,7 +252,6 @@ class CreateReportActivity : AppCompatActivity() {
             }
             row.addView(hint)
             linearVariables.addView(row)
-            allVariableViews.add(Pair(variable, inputField))
         }
     }
 
@@ -239,6 +270,17 @@ class CreateReportActivity : AppCompatActivity() {
         text = text.replace("{{Подразделение}}", deptName)
         text = text.replace("{{Расчет}}", unitName)
         
+        // Соисполнители
+        val subStr = if (selectedSubDepts.isNotEmpty()) selectedSubDepts.joinToString(", ") else ""
+        text = text.replace("{{Соисполнители}}", subStr)
+        
+        // Условный блок для соисполнителей
+        if (selectedSubDepts.isEmpty()) {
+            text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}.*?\\{\\{/Соисполнители\\}\\}"), "")
+        } else {
+            text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}(.*?)\\{\\{Соисполнители\\}\\}(.*?)\\{\\{/Соисполнители\\}\\}"), "$1$subStr$2")
+        }
+        
         // Собираем все переменные, которые есть в шаблоне
         val templateVars = mutableListOf<Variable>()
         allVariables.forEach { variable ->
@@ -247,10 +289,8 @@ class CreateReportActivity : AppCompatActivity() {
             }
         }
         
-        // Создаем Spannable для подсветки
-        val spannable = SpannableString(text)
-        var hasEmptyRequired = false
         var filledCount = 0
+        var hasEmptyRequired = false
         
         // Подставляем значения переменных
         templateVars.forEach { variable ->
@@ -258,35 +298,18 @@ class CreateReportActivity : AppCompatActivity() {
             val value = variableValues[variable.name] ?: ""
             
             if (value.isNotEmpty()) {
-                // Заменяем placeholder на значение
                 text = text.replace(placeholder, value)
                 filledCount++
             } else if (variable.required) {
-                // Обязательная, но не заполнена — подсвечиваем красным
                 hasEmptyRequired = true
-                val placeholderIndex = text.indexOf(placeholder)
-                if (placeholderIndex >= 0) {
-                    val endIndex = placeholderIndex + placeholder.length
-                    spannable.setSpan(
-                        ForegroundColorSpan(0xFFFF0000.toInt()),
-                        placeholderIndex,
-                        endIndex,
-                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
+                // Оставляем placeholder, он будет подсвечен красным
             } else {
-                // Необязательная и не заполнена — удаляем из текста
                 text = text.replace(placeholder, "")
             }
         }
         
-        // Обновляем TextView
         tvPreview.text = text
-        
-        // Обновляем счетчик
-        val totalVars = templateVars.size
-        val filled = filledCount
-        tvVarCount.text = "$filled из $totalVars переменных заполнено" +
+        tvVarCount.text = "$filledCount из ${templateVars.size} переменных заполнено" +
                           if (hasEmptyRequired) " ⚠️" else ""
     }
 
@@ -305,11 +328,19 @@ class CreateReportActivity : AppCompatActivity() {
         text = text.replace("{{Подразделение}}", deptName)
         text = text.replace("{{Расчет}}", unitName)
         
+        // Соисполнители
+        val subStr = if (selectedSubDepts.isNotEmpty()) selectedSubDepts.joinToString(", ") else ""
+        text = text.replace("{{Соисполнители}}", subStr)
+        if (selectedSubDepts.isEmpty()) {
+            text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}.*?\\{\\{/Соисполнители\\}\\}"), "")
+        } else {
+            text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}(.*?)\\{\\{Соисполнители\\}\\}(.*?)\\{\\{/Соисполнители\\}\\}"), "$1$subStr$2")
+        }
+        
         // Проверяем обязательные поля
         var allFilled = true
         val missingFields = mutableListOf<String>()
         
-        // Подставляем переменные
         allVariables.forEach { variable ->
             if (variable.name == "Расчет") return@forEach
             val value = variableValues[variable.name] ?: ""
@@ -336,6 +367,7 @@ class CreateReportActivity : AppCompatActivity() {
             templateName = templates[position].name,
             text = text,
             variables = variableValues.toString(),
+            subDepts = selectedSubDepts.joinToString(","),
             status = "saved"
         )
 
@@ -352,5 +384,37 @@ class CreateReportActivity : AppCompatActivity() {
                 finish()
             }
         }
+    }
+    
+    inner class SubDeptAdapter(
+        private val items: List<String>,
+        private val selected: MutableList<String>,
+        private val onUpdate: (MutableList<String>) -> Unit
+    ) : RecyclerView.Adapter<SubDeptAdapter.ViewHolder>() {
+        
+        class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val checkBox: CheckBox = itemView.findViewById(R.id.cb_subdept)
+        }
+        
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_subdept_check, parent, false)
+            return ViewHolder(view)
+        }
+        
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val item = items[position]
+            holder.checkBox.text = item
+            holder.checkBox.isChecked = selected.contains(item)
+            holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) {
+                    if (!selected.contains(item)) selected.add(item)
+                } else {
+                    selected.remove(item)
+                }
+                onUpdate(selected)
+            }
+        }
+        
+        override fun getItemCount(): Int = items.size
     }
 }

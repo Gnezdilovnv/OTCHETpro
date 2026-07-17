@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, ReportDetailActivity::class.java).putExtra("id", report.id))
             },
             onLongClick = { report ->
-                showDeleteDialog(report)
+                showDeleteConfirmDialog(report)
             }
         )
         rv.layoutManager = LinearLayoutManager(this)
@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
             "Танки" -> "танковый взвод Т-72"
             else -> ""
         }
-        tvDeptInfo.text = "Текущий отдел: $dept — $u"
+        tvDeptInfo.text = "Текущее подразделение: $dept — $u"
         tvTitle.text = "Боевой журнал"
     }
 
@@ -110,26 +110,34 @@ class MainActivity : AppCompatActivity() {
         loadReports()
     }
 
-    private fun showDeleteDialog(report: Report) {
+    // ============================================================
+    // ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ ОТЧЕТА
+    // ============================================================
+    private fun showDeleteConfirmDialog(report: Report) {
         AlertDialog.Builder(this)
-            .setTitle("Удалить отчет")
-            .setMessage("Удалить отчет \"${report.templateName}\"?")
+            .setTitle("Удалить отчет?")
+            .setMessage("Вы уверены, что хотите удалить отчет \"${report.templateName}\"?\nЭто действие нельзя отменить.")
+            .setIcon(android.R.drawable.ic_dialog_alert)
             .setPositiveButton("Удалить") { _, _ ->
-                CoroutineScope(Dispatchers.IO).launch {
-                    val db = AppDatabase.getInstance(this@MainActivity)
-                    db.reportDao().delete(report.id)
-                    // Удаляем файл
-                    val reportsDir = DocxGenerator.getReportsDir()
-                    val file = File(reportsDir, "Отчет_${report.id}.docx")
-                    if (file.exists()) file.delete()
-                    withContext(Dispatchers.Main) {
-                        loadReports()
-                        Toast.makeText(this@MainActivity, "✅ Отчет удален", Toast.LENGTH_SHORT).show()
-                    }
-                }
+                deleteReport(report)
             }
             .setNegativeButton("Отмена", null)
             .show()
+    }
+
+    private fun deleteReport(report: Report) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val db = AppDatabase.getInstance(this@MainActivity)
+            db.reportDao().delete(report.id)
+            // Удаляем файл
+            val reportsDir = DocxGenerator.getReportsDir()
+            val file = File(reportsDir, "Отчет_${report.id}.docx")
+            if (file.exists()) file.delete()
+            withContext(Dispatchers.Main) {
+                loadReports()
+                Toast.makeText(this@MainActivity, "✅ Отчет удален", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun loadReports() {

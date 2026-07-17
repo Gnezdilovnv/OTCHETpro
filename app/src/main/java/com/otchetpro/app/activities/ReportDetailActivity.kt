@@ -97,14 +97,22 @@ class ReportDetailActivity : AppCompatActivity() {
         }
         
         if (filePath == null) {
-            Toast.makeText(this, "Файл не найден. Попробуйте пересохранить отчет.", Toast.LENGTH_LONG).show()
+            AlertDialog.Builder(this)
+                .setTitle("Файл не найден")
+                .setMessage("Файл отчета не найден. Возможно, он был удален. Попробуйте пересохранить отчет.")
+                .setPositiveButton("OK", null)
+                .show()
             return
         }
         
         try {
             val file = File(filePath)
             if (!file.exists()) {
-                Toast.makeText(this, "Файл не существует", Toast.LENGTH_SHORT).show()
+                AlertDialog.Builder(this)
+                    .setTitle("Файл не найден")
+                    .setMessage("Файл отчета не существует. Попробуйте пересохранить отчет.")
+                    .setPositiveButton("OK", null)
+                    .show()
                 return
             }
             
@@ -123,7 +131,16 @@ class ReportDetailActivity : AppCompatActivity() {
         }
     }
 
+    // ============================================================
+    // ОТПРАВКА НА ПОЧТУ С ПРИКРЕПЛЕНИЕМ ФАЙЛА
+    // ============================================================
     private fun sendEmail() {
+        // Проверяем, что отчет сохранен
+        if (report == null) {
+            Toast.makeText(this, "Отчет не найден", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val recips = SharedPrefs.getRecipients(this)
         
         if (recips.isEmpty()) {
@@ -136,7 +153,7 @@ class ReportDetailActivity : AppCompatActivity() {
             .setTitle("Выберите получателя")
             .setItems(names) { _, i ->
                 val r = recips[i]
-                sendEmailTo(r.email, r.name)
+                sendEmailWithAttachment(r.email, r.name)
             }
             .setPositiveButton("Ввести вручную") { _, _ -> showManualEmailDialog() }
             .setNegativeButton("Отмена", null)
@@ -161,7 +178,7 @@ class ReportDetailActivity : AppCompatActivity() {
                 val name = nameInput.text.toString().trim()
                 val email = emailInput.text.toString().trim()
                 if (name.isNotEmpty() && email.isNotEmpty() && email.contains("@")) {
-                    sendEmailTo(email, name)
+                    sendEmailWithAttachment(email, name)
                 } else {
                     Toast.makeText(this, "Введите корректные данные", Toast.LENGTH_SHORT).show()
                 }
@@ -170,44 +187,54 @@ class ReportDetailActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun sendEmailTo(email: String, name: String) {
+    private fun sendEmailWithAttachment(email: String, name: String) {
         val r = report ?: return
+        
+        // Ищем файл
+        if (filePath == null) {
+            findFile(r.id)
+        }
+        
         val subject = "Боевое донесение — ${r.templateName}"
         val body = """
             Уважаемый(ая) $name!
 
-            Направляю боевое донесение.
+            Направляю боевое донесение в прикреплённом файле.
 
             -- 
             Сгенерировано автоматически в OTCHETpro
         """.trimIndent()
-
-        val reportsDir = DocxGenerator.getReportsDir()
-        val files = reportsDir.listFiles { file -> 
-            file.isFile && file.name.contains("Отчет_${r.id}") && file.extension == "docx"
-        }
-        val file = if (!files.isNullOrEmpty()) files[0] else null
 
         val intent = Intent(Intent.ACTION_SEND)
         intent.type = "application/msword"
         intent.putExtra(Intent.EXTRA_SUBJECT, subject)
         intent.putExtra(Intent.EXTRA_TEXT, body)
         
-        if (file != null && file.exists()) {
-            val uri = FileProvider.getUriForFile(
-                this,
-                "${packageName}.fileprovider",
-                file
-            )
-            intent.putExtra(Intent.EXTRA_STREAM, uri)
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        // Прикрепляем файл, если он есть
+        if (filePath != null) {
+            val file = File(filePath)
+            if (file.exists()) {
+                val uri = FileProvider.getUriForFile(
+                    this,
+                    "${packageName}.fileprovider",
+                    file
+                )
+                intent.putExtra(Intent.EXTRA_STREAM, uri)
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } else {
+                // Файл не найден, отправляем только текст
+                intent.type = "text/plain"
+                intent.putExtra(Intent.EXTRA_TEXT, body + "\n\n" + r.text)
+            }
         } else {
+            // Файл не найден, отправляем только текст
             intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_TEXT, body + "\n\n" + r.text)
         }
         
         startActivity(Intent.createChooser(intent, "Отправить письмо"))
 
+        // Обновляем статус в БД
         CoroutineScope(Dispatchers.IO).launch {
             val db = AppDatabase.getInstance(this@ReportDetailActivity)
             val current = db.reportDao().getById(id)
