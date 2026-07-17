@@ -42,6 +42,11 @@ class TemplateEditorActivity : AppCompatActivity() {
         spinnerDept = findViewById(R.id.spinner_template_dept)
         llDeptSelect = findViewById(R.id.ll_dept_select)
 
+        // Настройка для корректного ввода текста
+        etText.isFocusable = true
+        etText.isFocusableInTouchMode = true
+        etText.requestFocus()
+
         dept = SharedPrefs.getDept(this)
         allDepts = SharedPrefs.getDepts(this)
         allVariables = SharedPrefs.getVariables(this)
@@ -106,7 +111,7 @@ class TemplateEditorActivity : AppCompatActivity() {
             it.typeGlobal == "dept" && it.dept == selectedDept 
         }
 
-        // 1. Системные переменные (всегда)
+        // 1. Системные переменные
         val systemVars = listOf(
             "Подразделение" to "{{Подразделение}}",
             "Расчет" to "{{Расчет}}",
@@ -114,13 +119,13 @@ class TemplateEditorActivity : AppCompatActivity() {
         )
         addGroup("Системные переменные", systemVars.map { it.first }, true)
 
-        // 2. Общие переменные (всегда)
+        // 2. Общие переменные
         val commonVars = allVariables.filter { it.typeGlobal == "common" }
         if (commonVars.isNotEmpty()) {
             addGroup("Общие переменные (${commonVars.size})", commonVars.map { it.name }, false)
         }
 
-        // 3. Переменные подразделения (только если не общий шаблон)
+        // 3. Переменные подразделения
         if (!isCommon && deptVars.isNotEmpty()) {
             addGroup("Подразделение: $selectedDept (${deptVars.size})", deptVars.map { it.name }, false)
         }
@@ -212,12 +217,33 @@ class TemplateEditorActivity : AppCompatActivity() {
         val name = etName.text.toString().trim()
         val text = etText.text.toString().trim()
 
+        // ============================================================
+        // ВАЛИДАЦИЯ
+        // ============================================================
+        var hasError = false
+
         if (name.isEmpty()) {
-            Toast.makeText(this, "Введите название шаблона", Toast.LENGTH_SHORT).show()
-            return
+            etName.error = "Введите название шаблона"
+            etName.requestFocus()
+            hasError = true
+        } else if (name.length < 3) {
+            etName.error = "Название должно быть не менее 3 символов"
+            etName.requestFocus()
+            hasError = true
         }
+
         if (text.isEmpty()) {
-            Toast.makeText(this, "Введите текст шаблона", Toast.LENGTH_SHORT).show()
+            etText.error = "Введите текст шаблона"
+            if (!hasError) etText.requestFocus()
+            hasError = true
+        } else if (text.length < 3) {
+            etText.error = "Текст должен быть не менее 3 символов"
+            if (!hasError) etText.requestFocus()
+            hasError = true
+        }
+
+        if (hasError) {
+            Toast.makeText(this, "Пожалуйста, исправьте ошибки в форме", Toast.LENGTH_LONG).show()
             return
         }
 

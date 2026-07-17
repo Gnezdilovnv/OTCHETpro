@@ -24,18 +24,35 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <activity android:name=".activities.DeptSelectActivity" android:exported="true">
+        <activity
+            android:name=".activities.DeptSelectActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <activity android:name=".activities.MainActivity" />
-        <activity android:name=".activities.CreateReportActivity" />
-        <activity android:name=".activities.ReportDetailActivity" />
-        <activity android:name=".activities.SettingsActivity" />
-        <activity android:name=".activities.TemplateEditorActivity" />
+        <activity
+            android:name=".activities.MainActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".activities.CreateReportActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".activities.ReportDetailActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".activities.SettingsActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".activities.TemplateEditorActivity"
+            android:windowSoftInputMode="adjustResize" />
 
     </application>
 

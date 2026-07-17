@@ -43,9 +43,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Сохранен"
-            android:padding="4dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:padding="4dp 12dp"
             android:background="#eef4fc"
             android:textColor="#1a4cba"
             android:textSize="12sp"
@@ -63,34 +61,46 @@
             android:minHeight="100dp"
             android:layout_marginBottom="16dp" />
 
-        <Button
-            android:id="@+id/btn_open_file"
+        <!-- Кнопки с дизайном -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/btn_success"
-            android:text="📂 Открыть файл"
-            android:textColor="#ffffff"
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp">
 
-        <Button
-            android:id="@+id/btn_send_email"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/btn_gmail"
-            android:text="📨 Отправить на почту"
-            android:textColor="#ffffff"
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp" />
+            <Button
+                android:id="@+id/btn_open_file"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/btn_success"
+                android:text="📂 ОТКРЫТЬ ФАЙЛ"
+                android:textColor="#ffffff"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
 
-        <Button
-            android:id="@+id/btn_share"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="#6f85a5"
-            android:text="↗ Поделиться"
-            android:textColor="#ffffff"
-            android:textSize="14sp" />
+            <Button
+                android:id="@+id/btn_send_email"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/btn_gmail"
+                android:text="📨 ОТПРАВИТЬ НА ПОЧТУ"
+                android:textColor="#ffffff"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btn_share"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="#6f85a5"
+                android:text="↗ ПОДЕЛИТЬСЯ"
+                android:textColor="#ffffff"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tv_email_status"

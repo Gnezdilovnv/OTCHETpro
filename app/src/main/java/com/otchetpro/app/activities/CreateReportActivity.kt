@@ -1,6 +1,9 @@
 package com.otchetpro.app.activities
 
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -27,6 +30,7 @@ class CreateReportActivity : AppCompatActivity() {
     private var templates = listOf<Template>()
     private var allVariables = listOf<Variable>()
     private var allDepts = listOf<String>()
+    private var allVariableViews = mutableListOf<Pair<Variable, View>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,11 +52,15 @@ class CreateReportActivity : AppCompatActivity() {
         setupUnitSpinner()
         setupTemplateSpinner()
         
-        allVariables = SharedPrefs.getVariables(this).filter { it.dept == dept || it.typeGlobal == "common" }
+        allVariables = SharedPrefs.getVariables(this).filter { 
+            it.dept == dept || it.typeGlobal == "common" || it.typeGlobal == "dept"
+        }
         generateVariableFields()
 
         spinnerTemplate.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) { updatePreview() }
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) { 
+                updatePreview() 
+            }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
@@ -81,13 +89,11 @@ class CreateReportActivity : AppCompatActivity() {
     }
 
     private fun setupUnitSpinner() {
-        // Ищем переменную "Расчет" для выбранного отдела
-        val vars = SharedPrefs.getVariables(this).filter { 
+        val unitVars = SharedPrefs.getVariables(this).filter { 
             it.name == "Расчет" && it.dept == selectedDept && it.type == "select"
         }
-        
-        val options = if (vars.isNotEmpty()) {
-            vars.first().options
+        val options = if (unitVars.isNotEmpty()) {
+            unitVars.first().options
         } else {
             listOf("Нет расчетов")
         }
@@ -116,9 +122,10 @@ class CreateReportActivity : AppCompatActivity() {
 
     private fun generateVariableFields() {
         linearVariables.removeAllViews()
+        allVariableViews.clear()
         
         allVariables.forEach { variable ->
-            if (variable.name == "Расчет") return@forEach // Расчет уже есть в спиннере
+            if (variable.name == "Расчет") return@forEach
             
             val row = LinearLayout(this).apply { 
                 orientation = LinearLayout.VERTICAL
@@ -213,6 +220,7 @@ class CreateReportActivity : AppCompatActivity() {
             }
             row.addView(hint)
             linearVariables.addView(row)
+            allVariableViews.add(Pair(variable, inputField))
         }
     }
 
@@ -231,15 +239,55 @@ class CreateReportActivity : AppCompatActivity() {
         text = text.replace("{{Подразделение}}", deptName)
         text = text.replace("{{Расчет}}", unitName)
         
-        // Подставляем переменные
+        // Собираем все переменные, которые есть в шаблоне
+        val templateVars = mutableListOf<Variable>()
         allVariables.forEach { variable ->
-            if (variable.name == "Расчет") return@forEach
-            val value = variableValues[variable.name] ?: ""
-            text = text.replace("{{${variable.name}}}", if (value.isNotEmpty()) value else "[${variable.name}]")
+            if (text.contains("{{${variable.name}}}")) {
+                templateVars.add(variable)
+            }
         }
         
+        // Создаем Spannable для подсветки
+        val spannable = SpannableString(text)
+        var hasEmptyRequired = false
+        var filledCount = 0
+        
+        // Подставляем значения переменных
+        templateVars.forEach { variable ->
+            val placeholder = "{{${variable.name}}}"
+            val value = variableValues[variable.name] ?: ""
+            
+            if (value.isNotEmpty()) {
+                // Заменяем placeholder на значение
+                text = text.replace(placeholder, value)
+                filledCount++
+            } else if (variable.required) {
+                // Обязательная, но не заполнена — подсвечиваем красным
+                hasEmptyRequired = true
+                val placeholderIndex = text.indexOf(placeholder)
+                if (placeholderIndex >= 0) {
+                    val endIndex = placeholderIndex + placeholder.length
+                    spannable.setSpan(
+                        ForegroundColorSpan(0xFFFF0000.toInt()),
+                        placeholderIndex,
+                        endIndex,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            } else {
+                // Необязательная и не заполнена — удаляем из текста
+                text = text.replace(placeholder, "")
+            }
+        }
+        
+        // Обновляем TextView
         tvPreview.text = text
-        tvVarCount.text = "${variableValues.size} переменных"
+        
+        // Обновляем счетчик
+        val totalVars = templateVars.size
+        val filled = filledCount
+        tvVarCount.text = "$filled из $totalVars переменных заполнено" +
+                          if (hasEmptyRequired) " ⚠️" else ""
     }
 
     private fun saveReport() {
@@ -257,27 +305,29 @@ class CreateReportActivity : AppCompatActivity() {
         text = text.replace("{{Подразделение}}", deptName)
         text = text.replace("{{Расчет}}", unitName)
         
+        // Проверяем обязательные поля
+        var allFilled = true
+        val missingFields = mutableListOf<String>()
+        
         // Подставляем переменные
         allVariables.forEach { variable ->
             if (variable.name == "Расчет") return@forEach
             val value = variableValues[variable.name] ?: ""
-            text = text.replace("{{${variable.name}}}", if (value.isNotEmpty()) value else "[${variable.name}]")
-        }
-        
-        // Проверяем обязательные поля
-        var allFilled = true
-        allVariables.forEach { variable ->
-            if (variable.name == "Расчет") return@forEach
-            if (variable.required) {
-                val value = variableValues[variable.name] ?: ""
-                if (value.isEmpty()) {
-                    allFilled = false
-                }
+            
+            if (variable.required && value.isEmpty()) {
+                allFilled = false
+                missingFields.add(variable.name)
+                text = text.replace("{{${variable.name}}}", "[${variable.name} не заполнено]")
+            } else if (value.isNotEmpty()) {
+                text = text.replace("{{${variable.name}}}", value)
+            } else {
+                text = text.replace("{{${variable.name}}}", "")
             }
         }
         
         if (!allFilled) {
-            Toast.makeText(this, "Заполните все обязательные поля!", Toast.LENGTH_SHORT).show()
+            val message = "Заполните обязательные поля:\n" + missingFields.joinToString(", ")
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             return
         }
         
