@@ -46,4 +46,15 @@
         android:layout_height="wrap_content"
         android:orientation="vertical" />
 
+    <Button
+        android:id="@+id/btn_goto_settings"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@drawable/btn_primary"
+        android:text="⚙ Настройки"
+        android:textColor="#ffffff"
+        android:textSize="14sp"
+        android:layout_marginTop="24dp"
+        android:visibility="gone" />
+
 </LinearLayout>

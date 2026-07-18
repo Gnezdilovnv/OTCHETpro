@@ -16,6 +16,7 @@ class DeptSelectActivity : AppCompatActivity() {
     private lateinit var deptList: LinearLayout
     private lateinit var progressBar: ProgressBar
     private lateinit var tvEmpty: TextView
+    private lateinit var btnSettings: Button
     private var currentDept = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,6 +26,11 @@ class DeptSelectActivity : AppCompatActivity() {
         deptList = findViewById(R.id.dept_list_container)
         progressBar = findViewById(R.id.progress_bar)
         tvEmpty = findViewById(R.id.tv_empty)
+        btnSettings = findViewById(R.id.btn_goto_settings)
+
+        btnSettings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
 
         currentDept = SharedPrefs.getDept(this)
         loadDepts()
@@ -32,7 +38,6 @@ class DeptSelectActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Обновляем список при возврате из настроек
         val newDept = SharedPrefs.getDept(this)
         if (newDept != currentDept) {
             currentDept = newDept
@@ -44,12 +49,13 @@ class DeptSelectActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
         deptList.removeAllViews()
         tvEmpty.visibility = View.GONE
+        btnSettings.visibility = View.GONE
 
         val depts = SharedPrefs.getDepts(this)
-
         if (depts.isEmpty()) {
+            tvEmpty.text = "Нет подразделений.\nПерейдите в настройки."
             tvEmpty.visibility = View.VISIBLE
-            tvEmpty.text = "Нет подразделений.\nДобавьте в настройках."
+            btnSettings.visibility = View.VISIBLE
             progressBar.visibility = View.GONE
             return
         }
@@ -59,8 +65,7 @@ class DeptSelectActivity : AppCompatActivity() {
                 text = deptName
                 setPadding(16, 24, 16, 24)
                 textSize = 16f
-                
-                // Выделяем текущее подразделение
+
                 if (deptName == currentDept) {
                     setBackgroundResource(R.drawable.btn_primary)
                     setTextColor(0xFFFFFFFF.toInt())
@@ -68,11 +73,11 @@ class DeptSelectActivity : AppCompatActivity() {
                     setBackgroundResource(R.drawable.btn_outline)
                     setTextColor(0xFF0B1A2F.toInt())
                 }
-                
+
                 setOnClickListener {
                     SharedPrefs.saveDept(this@DeptSelectActivity, deptName)
                     currentDept = deptName
-                    loadDepts() // Обновляем выделение
+                    loadDepts()
                     startActivity(Intent(this@DeptSelectActivity, MainActivity::class.java))
                     finish()
                 }
