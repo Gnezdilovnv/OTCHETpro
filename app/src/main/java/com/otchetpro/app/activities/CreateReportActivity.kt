@@ -273,8 +273,9 @@ class CreateReportActivity : AppCompatActivity() {
                 }
                 "select" -> Spinner(this).apply {
                     val options = variable.options.toTypedArray()
-                    adapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
+                    val adapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
                         if (options.isEmpty()) arrayOf("Нет вариантов") else options)
+                    this.adapter = adapter
                     setPadding(12, 12, 12, 12)
                     setBackgroundResource(android.R.drawable.editbox_background)
                     setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {
@@ -289,8 +290,9 @@ class CreateReportActivity : AppCompatActivity() {
                 }
                 "multiselect" -> Spinner(this).apply {
                     val options = variable.options.toTypedArray()
-                    adapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
+                    val adapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
                         if (options.isEmpty()) arrayOf("Нет вариантов") else options)
+                    this.adapter = adapter
                     setPadding(12, 12, 12, 12)
                     setBackgroundResource(android.R.drawable.editbox_background)
                     setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {
