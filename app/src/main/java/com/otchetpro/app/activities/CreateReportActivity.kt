@@ -98,9 +98,9 @@ class CreateReportActivity : AppCompatActivity() {
     }
 
     private fun setupDeptSpinner() {
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerDept.adapter = adapter
+        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts)
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerDept.adapter = spinnerAdapter
         
         val currentIndex = allDepts.indexOf(dept)
         if (currentIndex >= 0) spinnerDept.setSelection(currentIndex)
@@ -125,9 +125,9 @@ class CreateReportActivity : AppCompatActivity() {
             listOf("Нет расчетов")
         }
         
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerUnit.adapter = adapter
+        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options)
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerUnit.adapter = spinnerAdapter
         
         spinnerUnit.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -142,9 +142,9 @@ class CreateReportActivity : AppCompatActivity() {
         val allTemplates = SharedPrefs.getTemplates(this)
         templates = allTemplates.filter { it.dept == dept || it.type == "common" }
         val templateNames = templates.map { it.name }
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, templateNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerTemplate.adapter = adapter
+        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, templateNames)
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerTemplate.adapter = spinnerAdapter
     }
 
     private fun setupSubDepts() {
@@ -273,9 +273,10 @@ class CreateReportActivity : AppCompatActivity() {
                 }
                 "select" -> Spinner(this).apply {
                     val options = variable.options.toTypedArray()
-                    val adapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
+                    val spinnerAdapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
                         if (options.isEmpty()) arrayOf("Нет вариантов") else options)
-                    this.adapter = adapter
+                    spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    this.adapter = spinnerAdapter
                     setPadding(12, 12, 12, 12)
                     setBackgroundResource(android.R.drawable.editbox_background)
                     setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {
@@ -290,9 +291,10 @@ class CreateReportActivity : AppCompatActivity() {
                 }
                 "multiselect" -> Spinner(this).apply {
                     val options = variable.options.toTypedArray()
-                    val adapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
+                    val spinnerAdapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
                         if (options.isEmpty()) arrayOf("Нет вариантов") else options)
-                    this.adapter = adapter
+                    spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    this.adapter = spinnerAdapter
                     setPadding(12, 12, 12, 12)
                     setBackgroundResource(android.R.drawable.editbox_background)
                     setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {

@@ -84,7 +84,7 @@ object DocxGenerator {
             titleRun.fontFamily = "Times New Roman"
             
             val emptyPara = doc.createParagraph()
-            emptyPara.createRun().text = ""
+            emptyPara.createRun().setText("")
             
             val para = doc.createParagraph()
             para.alignment = ParagraphAlignment.LEFT
