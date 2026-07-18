@@ -227,12 +227,12 @@ class CreateReportActivity : AppCompatActivity() {
         allVariables.forEach { variable ->
             if (variable.name == "Расчет") return@forEach
             
-            val row = LinearLayout(this).apply { 
+            val row = LinearLayout(this@CreateReportActivity).apply { 
                 orientation = LinearLayout.VERTICAL
                 setPadding(0, 0, 0, 16)
             }
             
-            val label = TextView(this).apply {
+            val label = TextView(this@CreateReportActivity).apply {
                 text = variable.name + if (variable.required) " *" else ""
                 setTextColor(0xFF0B1A2F.toInt())
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -240,7 +240,7 @@ class CreateReportActivity : AppCompatActivity() {
             row.addView(label)
             
             val inputField = when (variable.type) {
-                "date" -> EditText(this).apply {
+                "date" -> EditText(this@CreateReportActivity).apply {
                     hint = "ДД.ММ.ГГГГ"
                     setPadding(12, 12, 12, 12)
                     setBackgroundResource(android.R.drawable.editbox_background)
@@ -255,7 +255,7 @@ class CreateReportActivity : AppCompatActivity() {
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                     })
                 }
-                "number" -> EditText(this).apply {
+                "number" -> EditText(this@CreateReportActivity).apply {
                     inputType = android.text.InputType.TYPE_CLASS_NUMBER
                     hint = "Введите число"
                     setPadding(12, 12, 12, 12)
@@ -271,7 +271,7 @@ class CreateReportActivity : AppCompatActivity() {
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                     })
                 }
-                "select" -> Spinner(this).apply {
+                "select" -> Spinner(this@CreateReportActivity).apply {
                     val options = variable.options.toTypedArray()
                     val spinnerAdapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
                         if (options.isEmpty()) arrayOf("Нет вариантов") else options)
@@ -289,7 +289,7 @@ class CreateReportActivity : AppCompatActivity() {
                         override fun onNothingSelected(parent: AdapterView<*>?) {}
                     })
                 }
-                "multiselect" -> Spinner(this).apply {
+                "multiselect" -> Spinner(this@CreateReportActivity).apply {
                     val options = variable.options.toTypedArray()
                     val spinnerAdapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
                         if (options.isEmpty()) arrayOf("Нет вариантов") else options)
@@ -307,7 +307,7 @@ class CreateReportActivity : AppCompatActivity() {
                         override fun onNothingSelected(parent: AdapterView<*>?) {}
                     })
                 }
-                else -> EditText(this).apply {
+                else -> EditText(this@CreateReportActivity).apply {
                     hint = "Введите значение"
                     setPadding(12, 12, 12, 12)
                     setBackgroundResource(android.R.drawable.editbox_background)
@@ -324,7 +324,7 @@ class CreateReportActivity : AppCompatActivity() {
             }
             row.addView(inputField)
             
-            val hint = TextView(this).apply {
+            val hint = TextView(this@CreateReportActivity).apply {
                 text = if (variable.required) "Обязательное поле" else "Необязательное поле"
                 textSize = 11f
                 setTextColor(0xFF6F85A5.toInt())
