@@ -20,6 +20,9 @@ import java.util.*
 
 class CreateReportActivity : AppCompatActivity() {
 
+    // ============================================================
+    // ПОЛЯ КЛАССА
+    // ============================================================
     private lateinit var spinnerTemplate: Spinner
     private lateinit var spinnerDept: Spinner
     private lateinit var spinnerUnit: Spinner
@@ -40,9 +43,11 @@ class CreateReportActivity : AppCompatActivity() {
     private var allVariables = listOf<Variable>()
     private var allDepts = listOf<String>()
     private var selectedSubDepts = mutableListOf<String>()
-    private lateinit var subDeptAdapter: SubDeptAdapter
     private var isDraftSaved = false
 
+    // ============================================================
+    // LIFECYCLE
+    // ============================================================
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_create_report)
@@ -97,6 +102,9 @@ class CreateReportActivity : AppCompatActivity() {
         updatePreview()
     }
 
+    // ============================================================
+    // НАСТРОЙКА СПИННЕРОВ
+    // ============================================================
     private fun setupDeptSpinner() {
         val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts)
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -147,6 +155,9 @@ class CreateReportActivity : AppCompatActivity() {
         spinnerTemplate.adapter = spinnerAdapter
     }
 
+    // ============================================================
+    // НАСТРОЙКА ПОДПОДРАЗДЕЛЕНИЙ
+    // ============================================================
     private fun setupSubDepts() {
         val allUnits = SharedPrefs.getAllUnits(this)
         val grouped = allUnits.groupBy { it.first }
@@ -157,19 +168,27 @@ class CreateReportActivity : AppCompatActivity() {
         if (items.isNotEmpty()) {
             rvSubDepts.visibility = View.VISIBLE
             tvSubDeptsHint.visibility = View.VISIBLE
-            subDeptAdapter = SubDeptAdapter(items, selectedSubDepts) { updated ->
-                selectedSubDepts = updated
-                tvSubDeptsHint.text = "Выбрано: ${selectedSubDepts.size} соисполнителей"
-                updatePreview()
-            }
+            
+            val adapter = SubDeptAdapter(
+                items = items,
+                selected = selectedSubDepts,
+                onUpdate = { updated ->
+                    selectedSubDepts = updated
+                    tvSubDeptsHint.text = "Выбрано: ${selectedSubDepts.size} соисполнителей"
+                    updatePreview()
+                }
+            )
             rvSubDepts.layoutManager = LinearLayoutManager(this)
-            rvSubDepts.adapter = subDeptAdapter
+            rvSubDepts.adapter = adapter
         } else {
             rvSubDepts.visibility = View.GONE
             tvSubDeptsHint.visibility = View.GONE
         }
     }
 
+    // ============================================================
+    // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+    // ============================================================
     private fun setupDateMask(editText: EditText) {
         editText.addTextChangedListener(object : TextWatcher {
             private var isUpdating = false
@@ -222,7 +241,7 @@ class CreateReportActivity : AppCompatActivity() {
     }
 
     // ============================================================
-    // ГЕНЕРАЦИЯ ПОЛЕЙ ПЕРЕМЕННЫХ — РАЗДЕЛЁННАЯ ЛОГИКА
+    // ГЕНЕРАЦИЯ ПОЛЕЙ ПЕРЕМЕННЫХ
     // ============================================================
     private fun generateVariableFields() {
         linearVariables.removeAllViews()
@@ -255,9 +274,6 @@ class CreateReportActivity : AppCompatActivity() {
         }
     }
 
-    // ============================================================
-    // СОЗДАНИЕ ПОЛЯ ВВОДА — ИСПРАВЛЕНО
-    // ============================================================
     private fun createInputField(variable: Variable): View {
         val context = this@CreateReportActivity
         return when (variable.type) {
@@ -355,6 +371,9 @@ class CreateReportActivity : AppCompatActivity() {
         }
     }
 
+    // ============================================================
+    // ОБНОВЛЕНИЕ ПРЕВЬЮ
+    // ============================================================
     private fun updatePreview() {
         val position = spinnerTemplate.selectedItemPosition
         if (position < 0 || position >= templates.size) {
@@ -402,6 +421,9 @@ class CreateReportActivity : AppCompatActivity() {
         tvVarCount.text = "$filledCount из ${templateVars.size} переменных заполнено"
     }
 
+    // ============================================================
+    // ЧЕРНОВИК
+    // ============================================================
     private fun autoSaveDraft() {
         val prefs = getSharedPreferences("draft", MODE_PRIVATE)
         prefs.edit()
@@ -445,6 +467,9 @@ class CreateReportActivity : AppCompatActivity() {
         finish()
     }
 
+    // ============================================================
+    // СОХРАНЕНИЕ ОТЧЕТА
+    // ============================================================
     private fun saveReport() {
         val position = spinnerTemplate.selectedItemPosition
         if (position < 0 || position >= templates.size) {
@@ -532,9 +557,9 @@ class CreateReportActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     // ============================================================
-    // INNER CLASS — В КОНЦЕ ФАЙЛА, ВНУТРИ КЛАССА
+    // INNER CLASS — ОБЪЯВЛЕН В ТЕЛЕ КЛАССА
     // ============================================================
     inner class SubDeptAdapter(
         private val items: List<String>,
