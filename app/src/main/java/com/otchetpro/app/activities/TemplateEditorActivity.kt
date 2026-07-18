@@ -31,7 +31,6 @@ class TemplateEditorActivity : AppCompatActivity() {
     private var dept = ""
     private var allVariables = listOf<Variable>()
     private var allDepts = listOf<String>()
-    private var selectedDept = ""
     private var isUpdatingText = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,11 +51,7 @@ class TemplateEditorActivity : AppCompatActivity() {
         allDepts = SharedPrefs.getDepts(this)
         allVariables = SharedPrefs.getVariables(this)
 
-        // Защита от пустого списка подразделений
-        if (allDepts.isEmpty()) {
-            allDepts = listOf("БпЛА", "Миномет", "Артиллерия", "Танки")
-        }
-
+        if (allDepts.isEmpty()) allDepts = listOf("БпЛА", "Миномет", "Артиллерия", "Танки")
         setupDeptSpinner()
 
         templateId = intent.getStringExtra("template_id")
@@ -67,9 +62,7 @@ class TemplateEditorActivity : AppCompatActivity() {
             etText.setText(intent.getStringExtra("template_text") ?: "")
             val templateType = intent.getStringExtra("template_type") ?: "own"
             cbCommon.isChecked = templateType == "common"
-            if (templateType == "common") {
-                llDeptSelect.visibility = View.GONE
-            }
+            llDeptSelect.visibility = if (templateType == "common") View.GONE else View.VISIBLE
         } else {
             tvTitle.text = "Новый шаблон"
             cbCommon.isChecked = false
@@ -78,25 +71,17 @@ class TemplateEditorActivity : AppCompatActivity() {
 
         cbCommon.setOnCheckedChangeListener { _, isChecked ->
             llDeptSelect.visibility = if (isChecked) View.GONE else View.VISIBLE
-            setupVariableButtons()
         }
 
         spinnerDept.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (position >= 0 && position < allDepts.size) {
-                    selectedDept = allDepts[position]
-                }
-                setupVariableButtons()
-            }
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {}
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
         etText.addTextChangedListener(object : android.text.TextWatcher {
-            override fun afterTextChanged(s: android.text.Editable?) {
-                if (!isUpdatingText) highlightSyntax()
-            }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { if (!isUpdatingText) highlightSyntax() }
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
         })
 
         setupAutoComplete()
@@ -111,20 +96,16 @@ class TemplateEditorActivity : AppCompatActivity() {
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerDept.adapter = adapter
-        val idx = allDepts.indexOf(dept)
-        if (idx >= 0) spinnerDept.setSelection(idx)
-        selectedDept = if (allDepts.isNotEmpty()) allDepts[if (idx >= 0) idx else 0] else dept
+        val idx = allDepts.indexOf(dept); if (idx >= 0) spinnerDept.setSelection(idx)
     }
 
     private fun highlightSyntax() {
         val text = etText.text?.toString() ?: return
+        if (text.isEmpty()) return
         val spannable = SpannableString(text)
-        val pattern = Regex("\\{\\{[^}]+\\}\\}")
-        pattern.findAll(text).forEach { match ->
-            val start = match.range.first
-            val end = match.range.last + 1
-            spannable.setSpan(BackgroundColorSpan(0xFFFFFF00.toInt()), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            spannable.setSpan(ForegroundColorSpan(0xFF0B1A2F.toInt()), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        Regex("\\{\\{[^}]+\\}\\}").findAll(text).forEach { match ->
+            spannable.setSpan(BackgroundColorSpan(0xFFFFFF00.toInt()), match.range.first, match.range.last + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannable.setSpan(ForegroundColorSpan(0xFF0B1A2F.toInt()), match.range.first, match.range.last + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         isUpdatingText = true
         val sel = etText.selectionStart.coerceAtMost(spannable.length)
@@ -142,14 +123,14 @@ class TemplateEditorActivity : AppCompatActivity() {
                 if (pos < 2 || pos > text.length) return
                 if (text.lastIndexOf("{{", pos) == pos - 2) showAutoCompleteDialog()
             }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
         })
     }
 
     private fun showAutoCompleteDialog() {
         val allVars = mutableListOf("Подразделение", "Расчет", "Соисполнители")
-        allVars.addAll(allVariables.map { it.name })
+        allVars.addAll(allVariables.filter { it.name != "Расчет" }.map { it.name }.distinct())
         AlertDialog.Builder(this)
             .setTitle("Выберите переменную")
             .setItems(allVars.toTypedArray()) { _, which ->
@@ -167,76 +148,75 @@ class TemplateEditorActivity : AppCompatActivity() {
 
     private fun setupVariableButtons() {
         llVariableContainer.removeAllViews()
-        val isCommon = cbCommon.isChecked
-        val deptVars = allVariables.filter { it.typeGlobal == "dept" && it.dept == selectedDept }
-        addGroup("Системные переменные", listOf("Подразделение", "Расчет", "Соисполнители"), true)
-        val commonVars = allVariables.filter { it.typeGlobal == "common" }
-        if (commonVars.isNotEmpty()) addGroup("Общие переменные (${commonVars.size})", commonVars.map { it.name }, false)
-        if (!isCommon && deptVars.isNotEmpty()) addGroup("Подразделение: $selectedDept (${deptVars.size})", deptVars.map { it.name }, false)
+
+        // Системные всегда
+        addGroup("Системные", listOf("Подразделение", "Расчет", "Соисполнители"), true)
+
+        // Общие переменные (все, кроме Расчета)
+        val commonVars = allVariables.filter { it.typeGlobal == "common" && it.name != "Расчет" }
+        if (commonVars.isNotEmpty()) addGroup("Общие переменные", commonVars.map { it.name }.distinct(), false)
+
+        // Переменные подразделений — группируем по dept
+        val deptVars = allVariables.filter { it.typeGlobal == "dept" && it.name != "Расчет" }
+        deptVars.groupBy { it.dept }.forEach { (deptName, vars) ->
+            if (deptName.isNotEmpty() && vars.isNotEmpty())
+                addGroup("Подразделение: $deptName", vars.map { it.name }.distinct(), false)
+        }
     }
 
     private fun addGroup(title: String, items: List<String>, isOpen: Boolean) {
         if (items.isEmpty()) return
         val container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 4, 0, 4) }
         val header = TextView(this).apply {
-            text = if (isOpen) "▼ $title" else "▶ $title"
-            textSize = 13f; setTextColor(0xFF0B1A2F.toInt()); typeface = android.graphics.Typeface.DEFAULT_BOLD
+            text = if (isOpen) "▼ $title (${items.size})" else "▶ $title (${items.size})"
+            textSize = 12f; setTextColor(0xFF0B1A2F.toInt()); typeface = android.graphics.Typeface.DEFAULT_BOLD
             setPadding(8, 8, 8, 8); setBackgroundResource(android.R.drawable.list_selector_background)
             isClickable = true; isFocusable = true; tag = if (isOpen) "open" else "closed"
         }
         val content = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; visibility = if (isOpen) View.VISIBLE else View.GONE
-            setPadding(8, 4, 8, 8)
+            orientation = LinearLayout.HORIZONTAL; visibility = if (isOpen) View.VISIBLE else View.GONE; setPadding(4, 2, 4, 2)
         }
         items.forEach { name ->
-            val btn = Button(this).apply {
-                text = name; setPadding(16, 8, 16, 8)
-                setOnClickListener {
-                    val pos = etText.selectionStart
-                    val text = etText.text.toString()
-                    val placeholder = "{{$name}}"
-                    val newText = text.substring(0, pos) + placeholder + text.substring(pos)
-                    isUpdatingText = true
-                    etText.setText(newText)
-                    etText.setSelection((pos + placeholder.length).coerceAtMost(newText.length))
-                    isUpdatingText = false
-                    highlightSyntax()
-                }
-            }
-            content.addView(btn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 8, 8) })
+            content.addView(Button(this).apply {
+                text = name; textSize = 10f; setPadding(8, 4, 8, 4); layoutParams = LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { setMargins(0, 0, 4, 4) }
+                setOnClickListener { insertVariable(name) }
+            })
         }
-        val scrollView = HorizontalScrollView(this).apply { addView(content); visibility = if (isOpen) View.VISIBLE else View.GONE }
-        container.addView(header)
-        container.addView(scrollView)
+        val scroll = HorizontalScrollView(this).apply { addView(content); visibility = if (isOpen) View.VISIBLE else View.GONE }
+        container.addView(header); container.addView(scroll)
         header.setOnClickListener {
-            if (header.tag == "open") {
-                header.text = "▶ ${title}"; scrollView.visibility = View.GONE; header.tag = "closed"
-            } else {
-                header.text = "▼ $title"; scrollView.visibility = View.VISIBLE; header.tag = "open"
-            }
+            if (header.tag == "open") { header.text = "▶ $title (${items.size})"; scroll.visibility = View.GONE; header.tag = "closed" }
+            else { header.text = "▼ $title (${items.size})"; scroll.visibility = View.VISIBLE; header.tag = "open" }
         }
         llVariableContainer.addView(container)
+    }
+
+    private fun insertVariable(name: String) {
+        val pos = etText.selectionStart
+        val txt = etText.text.toString()
+        val placeholder = "{{$name}}"
+        val newText = txt.substring(0, pos) + placeholder + txt.substring(pos)
+        isUpdatingText = true
+        etText.setText(newText)
+        etText.setSelection((pos + placeholder.length).coerceAtMost(newText.length))
+        isUpdatingText = false
+        highlightSyntax()
+        etText.requestFocus()
     }
 
     private fun saveTemplate() {
         val name = etName.text.toString().trim()
         val text = etText.text.toString().trim()
-        var hasError = false
-        if (name.isEmpty()) { etName.error = "Введите название"; hasError = true }
-        else if (name.length < 3) { etName.error = "Минимум 3 символа"; hasError = true }
-        if (text.isEmpty()) { etText.error = "Введите текст"; hasError = true }
-        else if (text.length < 3) { etText.error = "Минимум 3 символа"; hasError = true }
-        if (hasError) { Toast.makeText(this, "Исправьте ошибки", Toast.LENGTH_SHORT).show(); return }
-
+        if (name.isEmpty()) { etName.error = "Введите название"; return }
+        if (text.isEmpty()) { etText.error = "Введите текст"; return }
         val type = if (cbCommon.isChecked) "common" else "own"
-        val deptForTemplate = if (type == "common") "" else spinnerDept.selectedItem.toString()
+        val deptForTemplate = if (type == "common") "" else spinnerDept.selectedItem?.toString() ?: dept
         val templates = SharedPrefs.getTemplates(this).toMutableList()
-
         if (isEditMode && templateId != null) {
             val idx = templates.indexOfFirst { it.id == templateId }
             if (idx != -1) templates[idx] = templates[idx].copy(name = name, text = text, type = type, dept = deptForTemplate)
         } else {
-            templates.add(Template(id = UUID.randomUUID().toString(), name = name, text = text, type = type, dept = deptForTemplate))
+            templates.add(Template(UUID.randomUUID().toString(), name, text, type, deptForTemplate))
         }
         SharedPrefs.saveTemplates(this, templates)
         Toast.makeText(this, "✅ Шаблон сохранен", Toast.LENGTH_SHORT).show()

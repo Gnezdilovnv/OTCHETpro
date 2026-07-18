@@ -4,14 +4,15 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="#ffffff">
+    android:background="#ffffff"
+    android:focusableInTouchMode="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="12dp">
 
         <TextView
             android:id="@+id/tv_template_editor_title"
@@ -38,34 +39,26 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Название шаблона"
-        android:textSize="14sp"
+        android:textSize="13sp"
         android:textColor="#3a4f6e"
         android:layout_marginBottom="4dp" />
 
     <EditText
         android:id="@+id/et_template_name"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="44dp"
         android:padding="8dp"
         android:background="#f5f7fb"
         android:textSize="14sp"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="10dp" />
 
     <LinearLayout
         android:id="@+id/ll_dept_select"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="8dp"
         android:visibility="visible">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Подразделение"
-            android:textSize="13sp"
-            android:textColor="#3a4f6e"
-            android:layout_marginBottom="4dp" />
 
         <Spinner
             android:id="@+id/spinner_template_dept"
@@ -74,47 +67,54 @@
 
     </LinearLayout>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Текст шаблона (используйте {{Переменная}})"
-        android:textSize="14sp"
-        android:textColor="#3a4f6e"
-        android:layout_marginBottom="4dp" />
-
-    <EditText
-        android:id="@+id/et_template_text"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:padding="12dp"
-        android:background="#f5f7fb"
-        android:textSize="13sp"
-        android:fontFamily="monospace"
-        android:minHeight="150dp"
-        android:gravity="top"
-        android:layout_marginBottom="12dp" />
-
     <CheckBox
         android:id="@+id/cb_template_common"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Общий шаблон (доступен всем подразделениям)"
-        android:layout_marginBottom="12dp" />
+        android:text="Общий шаблон (доступен всем)"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Текст шаблона ({{Переменная}})"
+        android:textSize="13sp"
+        android:textColor="#3a4f6e"
+        android:layout_marginBottom="4dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <EditText
+            android:id="@+id/et_template_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="120dp"
+            android:padding="12dp"
+            android:background="#f5f7fb"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:gravity="top"
+            android:inputType="textMultiLine|textNoSuggestions" />
+
+    </ScrollView>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Вставить переменную:"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:textColor="#6f85a5"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="4dp" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:maxHeight="200dp"
-        android:layout_marginBottom="12dp">
+        android:maxHeight="160dp">
 
         <LinearLayout
             android:id="@+id/ll_variable_buttons_container"
@@ -128,10 +128,11 @@
     <Button
         android:id="@+id/btn_template_save"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="46dp"
         android:background="@drawable/btn_primary"
         android:text="Сохранить шаблон"
         android:textColor="#ffffff"
-        android:textSize="15sp" />
+        android:textSize="14sp"
+        android:layout_marginTop="8dp" />
 
 </LinearLayout>
