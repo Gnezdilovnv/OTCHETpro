@@ -1,5 +1,6 @@
 package com.otchetpro.app.activities
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.text.Spannable
 import android.text.SpannableString
@@ -97,6 +98,9 @@ class TemplateEditorActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
+        // Автодополнение
+        setupAutoComplete()
+
         setupVariableButtons()
         highlightSyntax()
 
@@ -114,28 +118,22 @@ class TemplateEditorActivity : AppCompatActivity() {
         selectedDept = spinnerDept.selectedItem.toString()
     }
 
-    // ============================================================
-    // ПОДСВЕТКА СИНТАКСИСА
-    // ============================================================
     private fun highlightSyntax() {
         val text = etText.text.toString()
         val spannable = SpannableString(text)
         
-        // Ищем все переменные {{...}}
         val pattern = Regex("\\{\\{[^}]+\\}\\}")
         val matches = pattern.findAll(text)
         
         matches.forEach { match ->
             val start = match.range.first
             val end = match.range.last + 1
-            // Желтый фон
             spannable.setSpan(
                 BackgroundColorSpan(0xFFFFFF00.toInt()),
                 start,
                 end,
                 Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
-            // Синий текст
             spannable.setSpan(
                 ForegroundColorSpan(0xFF0B1A2F.toInt()),
                 start,
@@ -145,9 +143,42 @@ class TemplateEditorActivity : AppCompatActivity() {
         }
         
         etText.setText(spannable, TextView.BufferType.SPANNABLE)
-        // Сохраняем позицию курсора
         val selection = etText.selectionStart
         etText.setSelection(selection.coerceAtMost(etText.text.length))
+    }
+
+    private fun setupAutoComplete() {
+        etText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val text = s.toString()
+                val cursorPos = etText.selectionStart
+                val lastOpen = text.lastIndexOf("{{", cursorPos)
+                if (lastOpen != -1 && lastOpen + 2 == cursorPos) {
+                    showAutoCompleteDialog()
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+    }
+
+    private fun showAutoCompleteDialog() {
+        val allVars = mutableListOf<String>()
+        allVars.addAll(listOf("Подразделение", "Расчет", "Соисполнители"))
+        allVars.addAll(allVariables.map { it.name })
+        
+        AlertDialog.Builder(this)
+            .setTitle("Выберите переменную")
+            .setItems(allVars.toTypedArray()) { _, which ->
+                val varName = allVars[which]
+                val text = etText.text.toString()
+                val cursorPos = etText.selectionStart
+                val newText = text.substring(0, cursorPos - 2) + "{{$varName}}" + text.substring(cursorPos)
+                etText.setText(newText)
+                etText.setSelection(cursorPos - 2 + "{{$varName}}".length)
+                highlightSyntax()
+            }
+            .show()
     }
 
     private fun setupVariableButtons() {
@@ -319,75 +350,3 @@ class TemplateEditorActivity : AppCompatActivity() {
         finish()
     }
 }
-
-    // Автодополнение переменных при вводе {{
-    private fun setupAutoComplete() {
-        etText.addTextChangedListener(object : android.text.TextWatcher {
-            override fun afterTextChanged(s: android.text.Editable?) {
-                val text = s.toString()
-                val cursorPos = etText.selectionStart
-                // Ищем последний ввод {{
-                val lastOpen = text.lastIndexOf("{{", cursorPos)
-                if (lastOpen != -1 && lastOpen + 2 == cursorPos) {
-                    showAutoCompleteDialog()
-                }
-            }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
-    }
-
-    private fun showAutoCompleteDialog() {
-        val allVars = mutableListOf<String>()
-        allVars.addAll(listOf("Подразделение", "Расчет", "Соисполнители"))
-        allVars.addAll(allVariables.map { it.name })
-        
-        AlertDialog.Builder(this)
-            .setTitle("Выберите переменную")
-            .setItems(allVars.toTypedArray()) { _, which ->
-                val varName = allVars[which]
-                val text = etText.text.toString()
-                val cursorPos = etText.selectionStart
-                // Заменяем {{ на {{ИмяПеременной}}
-                val newText = text.substring(0, cursorPos - 2) + "{{$varName}}" + text.substring(cursorPos)
-                etText.setText(newText)
-                etText.setSelection(cursorPos - 2 + "{{$varName}}".length)
-            }
-            .show()
-    }
-
-    // Автодополнение переменных при вводе {{
-    private fun setupAutoComplete() {
-        etText.addTextChangedListener(object : android.text.TextWatcher {
-            override fun afterTextChanged(s: android.text.Editable?) {
-                val text = s.toString()
-                val cursorPos = etText.selectionStart
-                // Ищем последний ввод {{
-                val lastOpen = text.lastIndexOf("{{", cursorPos)
-                if (lastOpen != -1 && lastOpen + 2 == cursorPos) {
-                    showAutoCompleteDialog()
-                }
-            }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
-    }
-
-    private fun showAutoCompleteDialog() {
-        val allVars = mutableListOf<String>()
-        allVars.addAll(listOf("Подразделение", "Расчет", "Соисполнители"))
-        allVars.addAll(allVariables.map { it.name })
-        
-        AlertDialog.Builder(this)
-            .setTitle("Выберите переменную")
-            .setItems(allVars.toTypedArray()) { _, which ->
-                val varName = allVars[which]
-                val text = etText.text.toString()
-                val cursorPos = etText.selectionStart
-                // Заменяем {{ на {{ИмяПеременной}}
-                val newText = text.substring(0, cursorPos - 2) + "{{$varName}}" + text.substring(cursorPos)
-                etText.setText(newText)
-                etText.setSelection(cursorPos - 2 + "{{$varName}}".length)
-            }
-            .show()
-    }

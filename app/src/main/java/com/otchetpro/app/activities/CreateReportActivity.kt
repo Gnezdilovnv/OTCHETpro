@@ -1,9 +1,12 @@
 package com.otchetpro.app.activities
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -167,9 +170,6 @@ class CreateReportActivity : AppCompatActivity() {
         }
     }
 
-    // ============================================================
-    // МАСКА ВВОДА ДАТЫ + ВАЛИДАЦИЯ
-    // ============================================================
     private fun setupDateMask(editText: EditText) {
         editText.addTextChangedListener(object : TextWatcher {
             private var isUpdating = false
@@ -184,7 +184,6 @@ class CreateReportActivity : AppCompatActivity() {
                     val month = clean.substring(2, 4).toIntOrNull() ?: 0
                     val year = clean.substring(4, 8).toIntOrNull() ?: 0
                     
-                    // Валидация даты
                     if (day in 1..31 && month in 1..12 && year in 1900..2100) {
                         editText.error = null
                     } else {
@@ -209,7 +208,6 @@ class CreateReportActivity : AppCompatActivity() {
         })
     }
 
-    // Валидация числового поля
     private fun validateNumberField(editText: EditText): Boolean {
         val text = editText.text.toString()
         if (text.isEmpty()) return true
@@ -379,9 +377,6 @@ class CreateReportActivity : AppCompatActivity() {
         tvVarCount.text = "$filledCount из ${templateVars.size} переменных заполнено"
     }
 
-    // ============================================================
-    // АВТОСОХРАНЕНИЕ ЧЕРНОВИКА
-    // ============================================================
     private fun autoSaveDraft() {
         val prefs = getSharedPreferences("draft", MODE_PRIVATE)
         prefs.edit()

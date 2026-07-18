@@ -8,7 +8,7 @@ import com.otchetpro.app.data.*
 object SharedPrefs {
     private val gson = Gson()
     private const val P = "otchetpro_prefs"
-    private val lock = Any() // Для синхронизации
+    private val lock = Any()
 
     fun getDept(c: Context) = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("dept", "БпЛА") ?: "БпЛА"
     fun saveDept(c: Context, d: String) { 

@@ -14,6 +14,7 @@ import com.otchetpro.app.data.*
 import com.otchetpro.app.utils.DocxGenerator
 import com.otchetpro.app.utils.SharedPrefs
 import kotlinx.coroutines.*
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -68,7 +69,6 @@ class MainActivity : AppCompatActivity() {
             cachedReports = null
             loadReports()
         } else {
-            // Проверяем, изменились ли данные в БД
             loadReports(useCache = false)
         }
     }
@@ -148,7 +148,6 @@ class MainActivity : AppCompatActivity() {
                 val reportsDir = DocxGenerator.getReportsDir()
                 val file = File(reportsDir, "Отчет_${report.id}.docx")
                 if (file.exists()) file.delete()
-                // Очищаем кэш
                 cachedReports = null
                 withContext(Dispatchers.Main) {
                     loadReports(useCache = false)
@@ -164,7 +163,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadReports(useCache: Boolean = true) {
-        // Проверяем кэш
         if (useCache && cachedReports != null && lastDept == dept) {
             applyReports(cachedReports!!)
             return
@@ -178,7 +176,6 @@ class MainActivity : AppCompatActivity() {
             try {
                 val db = AppDatabase.getInstance(this@MainActivity)
                 val all = db.reportDao().getByDept(dept)
-                // Сохраняем в кэш
                 cachedReports = all
                 lastDept = dept
                 withContext(Dispatchers.Main) {

@@ -433,9 +433,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    // ============================================================
-    // УНИВЕРСАЛЬНЫЙ ДИАЛОГ ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ
-    // ============================================================
     private fun showDeleteConfirmDialog(title: String, message: String, onConfirm: () -> Unit) {
         AlertDialog.Builder(this)
             .setTitle(title)
@@ -548,7 +545,6 @@ class SettingsActivity : AppCompatActivity() {
                     Toast.makeText(this, "❌ Введите название переменной", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                // Проверка на дубликат
                 val existing = variables.find { it.name == name && it.dept == dept }
                 if (existing != null) {
                     Toast.makeText(this, "❌ Переменная с таким именем уже существует", Toast.LENGTH_SHORT).show()
@@ -854,40 +850,3 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 }
-
-    // Сортировка списков
-    private fun sortLists() {
-        allDepts.sort()
-        subDepts.sort()
-        templates.sortBy { it.name }
-        variables.sortBy { it.name }
-        recipients.sortBy { it.name }
-    }
-
-    // Поиск по спискам
-    private fun filterList(list: List<String>, query: String): List<String> {
-        if (query.isEmpty()) return list
-        return list.filter { it.contains(query, ignoreCase = true) }
-    }
-
-    // Пагинация для списков
-    private fun <T> paginateList(list: List<T>, page: Int, pageSize: Int): List<T> {
-        val start = page * pageSize
-        val end = minOf(start + pageSize, list.size)
-        return if (start < list.size) list.subList(start, end) else emptyList()
-    }
-
-    // Текущие страницы
-    private var deptPage = 0
-    private val pageSize = 10
-
-    // Пагинация для списков
-    private fun <T> paginateList(list: List<T>, page: Int, pageSize: Int): List<T> {
-        val start = page * pageSize
-        val end = minOf(start + pageSize, list.size)
-        return if (start < list.size) list.subList(start, end) else emptyList()
-    }
-
-    // Текущие страницы
-    private var deptPage = 0
-    private val pageSize = 10

@@ -13,6 +13,7 @@ import com.otchetpro.app.data.*
 import com.otchetpro.app.utils.*
 import kotlinx.coroutines.*
 import java.io.File
+import java.util.*
 
 class ReportDetailActivity : AppCompatActivity() {
 
@@ -131,14 +132,10 @@ class ReportDetailActivity : AppCompatActivity() {
         }
     }
 
-    // ============================================================
-    // ПРЕДПРОСМОТР ПИСЬМА
-    // ============================================================
     private fun showEmailPreview() {
         val r = report ?: return
         val recips = SharedPrefs.getRecipients(this)
         
-        // Формируем текст письма
         val subject = "Боевое донесение — ${r.templateName}"
         val body = """
             Уважаемый(ая) ${if (recips.isNotEmpty()) recips[0].name else "получатель"}!
@@ -149,7 +146,6 @@ class ReportDetailActivity : AppCompatActivity() {
             Сгенерировано автоматически в OTCHETpro
         """.trimIndent()
         
-        // Показываем предпросмотр
         val previewView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16, 16, 16, 16)
@@ -249,11 +245,9 @@ class ReportDetailActivity : AppCompatActivity() {
                 val name = nameInput.text.toString().trim()
                 val email = emailInput.text.toString().trim()
                 if (name.isNotEmpty() && email.isNotEmpty() && email.contains("@")) {
-                    // Сохраняем в адресную книгу
                     val recipients = SharedPrefs.getRecipients(this).toMutableList()
                     recipients.add(Recipient(UUID.randomUUID().toString(), name, email, SharedPrefs.getDept(this)))
                     SharedPrefs.saveRecipients(this, recipients)
-                    
                     sendEmailTo(email, name)
                 } else {
                     Toast.makeText(this, "Введите корректные данные", Toast.LENGTH_SHORT).show()
