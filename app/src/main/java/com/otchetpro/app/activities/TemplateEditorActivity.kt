@@ -25,13 +25,14 @@ class TemplateEditorActivity : AppCompatActivity() {
     private lateinit var cbCommon: CheckBox
     private lateinit var spinnerDept: Spinner
     private lateinit var llDeptSelect: LinearLayout
-    
+
     private var templateId: String? = null
     private var isEditMode = false
     private var dept = ""
     private var allVariables = listOf<Variable>()
     private var allDepts = listOf<String>()
     private var selectedDept = ""
+    private var isUpdatingText = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,10 +47,6 @@ class TemplateEditorActivity : AppCompatActivity() {
         cbCommon = findViewById(R.id.cb_template_common)
         spinnerDept = findViewById(R.id.spinner_template_dept)
         llDeptSelect = findViewById(R.id.ll_dept_select)
-
-        etText.isFocusable = true
-        etText.isFocusableInTouchMode = true
-        etText.requestFocus()
 
         dept = SharedPrefs.getDept(this)
         allDepts = SharedPrefs.getDepts(this)
@@ -93,7 +90,11 @@ class TemplateEditorActivity : AppCompatActivity() {
 
         // Подсветка синтаксиса при изменении текста
         etText.addTextChangedListener(object : android.text.TextWatcher {
-            override fun afterTextChanged(s: android.text.Editable?) { highlightSyntax() }
+            override fun afterTextChanged(s: android.text.Editable?) {
+                if (!isUpdatingText) {
+                    highlightSyntax()
+                }
+            }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
@@ -112,7 +113,7 @@ class TemplateEditorActivity : AppCompatActivity() {
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerDept.adapter = adapter
-        
+
         val currentIndex = allDepts.indexOf(dept)
         if (currentIndex >= 0) spinnerDept.setSelection(currentIndex)
         selectedDept = spinnerDept.selectedItem.toString()
@@ -121,10 +122,10 @@ class TemplateEditorActivity : AppCompatActivity() {
     private fun highlightSyntax() {
         val text = etText.text.toString()
         val spannable = SpannableString(text)
-        
+
         val pattern = Regex("\\{\\{[^}]+\\}\\}")
         val matches = pattern.findAll(text)
-        
+
         matches.forEach { match ->
             val start = match.range.first
             val end = match.range.last + 1
@@ -141,17 +142,21 @@ class TemplateEditorActivity : AppCompatActivity() {
                 Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
         }
-        
+
+        isUpdatingText = true
+        val selection = etText.selectionStart.coerceAtMost(spannable.length)
         etText.setText(spannable, TextView.BufferType.SPANNABLE)
-        val selection = etText.selectionStart
         etText.setSelection(selection.coerceAtMost(etText.text.length))
+        isUpdatingText = false
     }
 
     private fun setupAutoComplete() {
         etText.addTextChangedListener(object : android.text.TextWatcher {
             override fun afterTextChanged(s: android.text.Editable?) {
-                val text = s.toString()
+                if (isUpdatingText) return
+                val text = s?.toString() ?: return
                 val cursorPos = etText.selectionStart
+                if (cursorPos < 0 || cursorPos > text.length) return
                 val lastOpen = text.lastIndexOf("{{", cursorPos)
                 if (lastOpen != -1 && lastOpen + 2 == cursorPos) {
                     showAutoCompleteDialog()
@@ -166,7 +171,7 @@ class TemplateEditorActivity : AppCompatActivity() {
         val allVars = mutableListOf<String>()
         allVars.addAll(listOf("Подразделение", "Расчет", "Соисполнители"))
         allVars.addAll(allVariables.map { it.name })
-        
+
         AlertDialog.Builder(this)
             .setTitle("Выберите переменную")
             .setItems(allVars.toTypedArray()) { _, which ->
@@ -174,8 +179,10 @@ class TemplateEditorActivity : AppCompatActivity() {
                 val text = etText.text.toString()
                 val cursorPos = etText.selectionStart
                 val newText = text.substring(0, cursorPos - 2) + "{{$varName}}" + text.substring(cursorPos)
+                isUpdatingText = true
                 etText.setText(newText)
-                etText.setSelection(cursorPos - 2 + "{{$varName}}".length)
+                etText.setSelection((cursorPos - 2 + "{{$varName}}".length).coerceAtMost(newText.length))
+                isUpdatingText = false
                 highlightSyntax()
             }
             .show()
@@ -185,8 +192,8 @@ class TemplateEditorActivity : AppCompatActivity() {
         llVariableContainer.removeAllViews()
 
         val isCommon = cbCommon.isChecked
-        val deptVars = allVariables.filter { 
-            it.typeGlobal == "dept" && it.dept == selectedDept 
+        val deptVars = allVariables.filter {
+            it.typeGlobal == "dept" && it.dept == selectedDept
         }
 
         val systemVars = listOf(
@@ -249,11 +256,11 @@ class TemplateEditorActivity : AppCompatActivity() {
                         "Соисполнители" -> "{{Соисполнители}}"
                         else -> "{{$name}}"
                     }
-                    val newText = text.substring(0, cursorPosition) + 
-                                   placeholder + 
-                                   text.substring(cursorPosition)
+                    val newText = text.substring(0, cursorPosition) + placeholder + text.substring(cursorPosition)
+                    isUpdatingText = true
                     etText.setText(newText)
-                    etText.setSelection(cursorPosition + placeholder.length)
+                    etText.setSelection((cursorPosition + placeholder.length).coerceAtMost(newText.length))
+                    isUpdatingText = false
                     highlightSyntax()
                 }
             }
@@ -285,7 +292,6 @@ class TemplateEditorActivity : AppCompatActivity() {
                 header.tag = "open"
             }
         }
-
         llVariableContainer.addView(container)
     }
 
@@ -322,9 +328,9 @@ class TemplateEditorActivity : AppCompatActivity() {
 
         val type = if (cbCommon.isChecked) "common" else "own"
         val selectedDept = if (type == "common") "" else spinnerDept.selectedItem.toString()
-        
+
         val templates = SharedPrefs.getTemplates(this).toMutableList()
-        
+
         if (isEditMode && templateId != null) {
             val index = templates.indexOfFirst { it.id == templateId }
             if (index != -1) {
