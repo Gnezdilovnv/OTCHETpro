@@ -221,26 +221,44 @@ class CreateReportActivity : AppCompatActivity() {
         }
     }
 
+    // ============================================================
+    // ГЕНЕРАЦИЯ ПОЛЕЙ ПЕРЕМЕННЫХ — РАЗДЕЛЁННАЯ ЛОГИКА
+    // ============================================================
     private fun generateVariableFields() {
         linearVariables.removeAllViews()
         
         allVariables.forEach { variable ->
             if (variable.name == "Расчет") return@forEach
             
-            val row = LinearLayout(this@CreateReportActivity).apply { 
+            val row = LinearLayout(this).apply { 
                 orientation = LinearLayout.VERTICAL
                 setPadding(0, 0, 0, 16)
             }
             
-            val label = TextView(this@CreateReportActivity).apply {
+            val label = TextView(this).apply {
                 text = variable.name + if (variable.required) " *" else ""
                 setTextColor(0xFF0B1A2F.toInt())
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
             }
             row.addView(label)
             
-            val inputField = when (variable.type) {
-                "date" -> EditText(this@CreateReportActivity).apply {
+            val inputField = createInputField(variable)
+            row.addView(inputField)
+            
+            val hint = TextView(this).apply {
+                text = if (variable.required) "Обязательное поле" else "Необязательное поле"
+                textSize = 11f
+                setTextColor(0xFF6F85A5.toInt())
+            }
+            row.addView(hint)
+            linearVariables.addView(row)
+        }
+    }
+
+    private fun createInputField(variable: Variable): View {
+        return when (variable.type) {
+            "date" -> {
+                EditText(this).apply {
                     hint = "ДД.ММ.ГГГГ"
                     setPadding(12, 12, 12, 12)
                     setBackgroundResource(android.R.drawable.editbox_background)
@@ -255,7 +273,9 @@ class CreateReportActivity : AppCompatActivity() {
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                     })
                 }
-                "number" -> EditText(this@CreateReportActivity).apply {
+            }
+            "number" -> {
+                EditText(this).apply {
                     inputType = android.text.InputType.TYPE_CLASS_NUMBER
                     hint = "Введите число"
                     setPadding(12, 12, 12, 12)
@@ -271,7 +291,9 @@ class CreateReportActivity : AppCompatActivity() {
                         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                     })
                 }
-                "select" -> Spinner(this@CreateReportActivity).apply {
+            }
+            "select" -> {
+                Spinner(this).apply {
                     val options = variable.options.toTypedArray()
                     val spinnerAdapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
                         if (options.isEmpty()) arrayOf("Нет вариантов") else options)
@@ -289,7 +311,9 @@ class CreateReportActivity : AppCompatActivity() {
                         override fun onNothingSelected(parent: AdapterView<*>?) {}
                     })
                 }
-                "multiselect" -> Spinner(this@CreateReportActivity).apply {
+            }
+            "multiselect" -> {
+                Spinner(this).apply {
                     val options = variable.options.toTypedArray()
                     val spinnerAdapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
                         if (options.isEmpty()) arrayOf("Нет вариантов") else options)
@@ -307,7 +331,9 @@ class CreateReportActivity : AppCompatActivity() {
                         override fun onNothingSelected(parent: AdapterView<*>?) {}
                     })
                 }
-                else -> EditText(this@CreateReportActivity).apply {
+            }
+            else -> {
+                EditText(this).apply {
                     hint = "Введите значение"
                     setPadding(12, 12, 12, 12)
                     setBackgroundResource(android.R.drawable.editbox_background)
@@ -322,15 +348,6 @@ class CreateReportActivity : AppCompatActivity() {
                     })
                 }
             }
-            row.addView(inputField)
-            
-            val hint = TextView(this@CreateReportActivity).apply {
-                text = if (variable.required) "Обязательное поле" else "Необязательное поле"
-                textSize = 11f
-                setTextColor(0xFF6F85A5.toInt())
-            }
-            row.addView(hint)
-            linearVariables.addView(row)
         }
     }
 
@@ -512,6 +529,9 @@ class CreateReportActivity : AppCompatActivity() {
         }
     }
     
+    // ============================================================
+    // INNER CLASS — В КОНЦЕ ФАЙЛА, ВНУТРИ КЛАССА
+    // ============================================================
     inner class SubDeptAdapter(
         private val items: List<String>,
         private val selected: MutableList<String>,
