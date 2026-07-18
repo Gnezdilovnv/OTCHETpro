@@ -47,7 +47,7 @@
         android:id="@+id/tv_dept_info"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Текущий отдел: БпЛА — ПВР №2 «Пчела»"
+        android:text="Текущее подразделение: БпЛА — ПВР №2 «Пчела»"
         android:textSize="12sp"
         android:textColor="#6f85a5"
         android:layout_marginBottom="16dp" />
@@ -102,14 +102,15 @@
 
     </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_reports"
     <ProgressBar
         android:id="@+id/progress_bar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:visibility="gone" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_reports"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
