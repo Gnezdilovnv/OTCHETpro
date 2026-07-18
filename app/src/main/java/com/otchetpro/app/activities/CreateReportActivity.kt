@@ -169,7 +169,6 @@ class CreateReportActivity : AppCompatActivity() {
             rvSubDepts.visibility = View.VISIBLE
             tvSubDeptsHint.visibility = View.VISIBLE
             
-            // Используем адаптер, созданный в классе
             val adapter = SubDeptAdapter(
                 items = items,
                 selected = selectedSubDepts,
