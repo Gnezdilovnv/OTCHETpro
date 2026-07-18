@@ -103,10 +103,36 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="Соисполнители"
+            android:textSize="14sp"
+            android:textColor="#3a4f6e"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tv_subdepts_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Выберите соисполнителей"
+            android:textSize="12sp"
+            android:textColor="#6f85a5"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_subdepts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false"
+            android:visibility="gone" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:text="Заполните поля"
             android:textSize="14sp"
             android:textColor="#3a4f6e"
             android:textStyle="bold"
+            android:layout_marginTop="12dp"
             android:layout_marginBottom="8dp" />
 
         <LinearLayout
@@ -115,21 +141,23 @@
             android:layout_height="wrap_content"
             android:orientation="vertical" />
 
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
+
         <Button
             android:id="@+id/btn_save_report"
-    <ProgressBar
-        android:id="@+id/progress_bar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone" />
             android:layout_width="match_parent"
             android:layout_height="54dp"
             android:background="@drawable/btn_primary"
             android:text="Сохранить"
             android:textColor="#ffffff"
             android:textSize="15sp"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="12dp" />
 
         <TextView
             android:id="@+id/tv_var_count"
