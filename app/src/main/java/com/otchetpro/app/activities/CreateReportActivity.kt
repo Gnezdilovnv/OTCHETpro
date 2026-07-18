@@ -106,9 +106,9 @@ class CreateReportActivity : AppCompatActivity() {
     // НАСТРОЙКА СПИННЕРОВ
     // ============================================================
     private fun setupDeptSpinner() {
-        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts)
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerDept.adapter = spinnerAdapter
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerDept.adapter = adapter
         
         val currentIndex = allDepts.indexOf(dept)
         if (currentIndex >= 0) spinnerDept.setSelection(currentIndex)
@@ -133,9 +133,9 @@ class CreateReportActivity : AppCompatActivity() {
             listOf("Нет расчетов")
         }
         
-        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options)
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerUnit.adapter = spinnerAdapter
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerUnit.adapter = adapter
         
         spinnerUnit.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -150,9 +150,9 @@ class CreateReportActivity : AppCompatActivity() {
         val allTemplates = SharedPrefs.getTemplates(this)
         templates = allTemplates.filter { it.dept == dept || it.type == "common" }
         val templateNames = templates.map { it.name }
-        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, templateNames)
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerTemplate.adapter = spinnerAdapter
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, templateNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerTemplate.adapter = adapter
     }
 
     // ============================================================
@@ -383,13 +383,11 @@ class CreateReportActivity : AppCompatActivity() {
         
         var text = templates[position].text
         
-        // Системные переменные
         val deptName = spinnerDept.selectedItem.toString()
         val unitName = spinnerUnit.selectedItem.toString()
         text = text.replace("{{Подразделение}}", deptName)
         text = text.replace("{{Расчет}}", unitName)
         
-        // Соисполнители
         val subStr = if (selectedSubDepts.isNotEmpty()) selectedSubDepts.joinToString(", ") else ""
         text = text.replace("{{Соисполнители}}", subStr)
         
@@ -399,7 +397,6 @@ class CreateReportActivity : AppCompatActivity() {
             text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}(.*?)\\{\\{Соисполнители\\}\\}(.*?)\\{\\{/Соисполнители\\}\\}"), "$1$subStr$2")
         }
         
-        // Подставляем переменные
         val templateVars = allVariables.filter { text.contains("{{${it.name}}}") }
         var filledCount = 0
         
@@ -411,7 +408,7 @@ class CreateReportActivity : AppCompatActivity() {
                 text = text.replace(placeholder, value)
                 filledCount++
             } else if (variable.required) {
-                // Оставляем placeholder для подсветки
+                // Оставляем placeholder
             } else {
                 text = text.replace(placeholder, "")
             }
@@ -481,13 +478,11 @@ class CreateReportActivity : AppCompatActivity() {
         
         var text = templates[position].text
         
-        // Системные переменные
         val deptName = spinnerDept.selectedItem.toString()
         val unitName = spinnerUnit.selectedItem.toString()
         text = text.replace("{{Подразделение}}", deptName)
         text = text.replace("{{Расчет}}", unitName)
         
-        // Соисполнители
         val subStr = if (selectedSubDepts.isNotEmpty()) selectedSubDepts.joinToString(", ") else ""
         text = text.replace("{{Соисполнители}}", subStr)
         if (selectedSubDepts.isEmpty()) {
@@ -496,7 +491,6 @@ class CreateReportActivity : AppCompatActivity() {
             text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}(.*?)\\{\\{Соисполнители\\}\\}(.*?)\\{\\{/Соисполнители\\}\\}"), "$1$subStr$2")
         }
         
-        // Проверяем обязательные поля
         var allFilled = true
         val missingFields = mutableListOf<String>()
         
@@ -559,7 +553,7 @@ class CreateReportActivity : AppCompatActivity() {
     }
 
     // ============================================================
-    // INNER CLASS — ОБЪЯВЛЕН В ТЕЛЕ КЛАССА (ПОСЛЕ ВСЕХ ФУНКЦИЙ)
+    // INNER CLASS — ОБЪЯВЛЕН В ТЕЛЕ КЛАССА
     // ============================================================
     inner class SubDeptAdapter(
         private val items: List<String>,
