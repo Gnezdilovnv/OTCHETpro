@@ -69,7 +69,6 @@ class ReportDetailActivity : AppCompatActivity() {
                     if (r.status == "sent") tvEmailStatus.visibility = View.VISIBLE
                     else tvEmailStatus.visibility = View.GONE
                     tvReportDate.text = "Создан: ${java.text.SimpleDateFormat("dd.MM.yyyy HH:mm").format(r.createdAt)}"
-                    
                     findFile(r.id)
                 }
             }
@@ -80,7 +79,7 @@ class ReportDetailActivity : AppCompatActivity() {
         try {
             val reportsDir = DocxGenerator.getReportsDir()
             if (reportsDir.exists()) {
-                val files = reportsDir.listFiles { file -> 
+                val files = reportsDir.listFiles { file ->
                     file.isFile && file.name.contains("Отчет_$reportId") && file.extension == "docx"
                 }
                 if (!files.isNullOrEmpty()) {
@@ -96,7 +95,7 @@ class ReportDetailActivity : AppCompatActivity() {
         if (filePath == null) {
             findFile(id)
         }
-        
+
         if (filePath == null) {
             AlertDialog.Builder(this)
                 .setTitle("Файл не найден")
@@ -105,7 +104,7 @@ class ReportDetailActivity : AppCompatActivity() {
                 .show()
             return
         }
-        
+
         try {
             val file = File(filePath)
             if (!file.exists()) {
@@ -116,15 +115,15 @@ class ReportDetailActivity : AppCompatActivity() {
                     .show()
                 return
             }
-            
+
             val uri = FileProvider.getUriForFile(
                 this,
                 "${packageName}.fileprovider",
                 file
             )
-            
+
             val intent = Intent(Intent.ACTION_VIEW)
-            intent.setDataAndType(uri, "application/msword")
+            intent.setDataAndType(uri, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             startActivity(Intent.createChooser(intent, "Открыть файл"))
         } catch (e: Exception) {
@@ -135,22 +134,22 @@ class ReportDetailActivity : AppCompatActivity() {
     private fun showEmailPreview() {
         val r = report ?: return
         val recips = SharedPrefs.getRecipients(this)
-        
+
         val subject = "Боевое донесение — ${r.templateName}"
         val body = """
             Уважаемый(ая) ${if (recips.isNotEmpty()) recips[0].name else "получатель"}!
 
             Направляю боевое донесение.
 
-            -- 
+            --
             Сгенерировано автоматически в OTCHETpro
         """.trimIndent()
-        
+
         val previewView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16, 16, 16, 16)
         }
-        
+
         val tvSubject = TextView(this).apply {
             text = "Тема: $subject"
             textSize = 14f
@@ -158,7 +157,7 @@ class ReportDetailActivity : AppCompatActivity() {
             typeface = android.graphics.Typeface.DEFAULT_BOLD
         }
         previewView.addView(tvSubject)
-        
+
         val tvBody = TextView(this).apply {
             text = body
             textSize = 13f
@@ -166,7 +165,7 @@ class ReportDetailActivity : AppCompatActivity() {
             setPadding(0, 8, 0, 0)
         }
         previewView.addView(tvBody)
-        
+
         val tvAttachment = TextView(this).apply {
             text = if (filePath != null) "📎 Вложение: ${File(filePath).name}" else "⚠️ Файл не найден"
             textSize = 12f
@@ -174,7 +173,7 @@ class ReportDetailActivity : AppCompatActivity() {
             setPadding(0, 8, 0, 0)
         }
         previewView.addView(tvAttachment)
-        
+
         val tvRecipients = TextView(this).apply {
             text = if (recips.isNotEmpty()) {
                 "📨 Получатели: " + recips.joinToString(", ") { it.name }
@@ -186,7 +185,7 @@ class ReportDetailActivity : AppCompatActivity() {
             setPadding(0, 8, 0, 0)
         }
         previewView.addView(tvRecipients)
-        
+
         AlertDialog.Builder(this)
             .setTitle("📨 Предпросмотр письма")
             .setView(previewView)
@@ -214,7 +213,7 @@ class ReportDetailActivity : AppCompatActivity() {
             showManualEmailDialog()
             return
         }
-        
+
         val names = recips.map { it.name }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle("Выберите получателя")
@@ -230,14 +229,14 @@ class ReportDetailActivity : AppCompatActivity() {
     private fun showManualEmailDialog() {
         val nameInput = EditText(this).apply { hint = "ФИО получателя" }
         val emailInput = EditText(this).apply { hint = "Email получателя" }
-        
+
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16, 16, 16, 16)
             addView(nameInput)
             addView(emailInput)
         }
-        
+
         AlertDialog.Builder(this)
             .setTitle("Введите получателя")
             .setView(container)
@@ -259,26 +258,26 @@ class ReportDetailActivity : AppCompatActivity() {
 
     private fun sendEmailTo(email: String, name: String) {
         val r = report ?: return
-        
+
         if (filePath == null) {
             findFile(r.id)
         }
-        
+
         val subject = "Боевое донесение — ${r.templateName}"
         val body = """
             Уважаемый(ая) $name!
 
             Направляю боевое донесение в прикреплённом файле.
 
-            -- 
+            --
             Сгенерировано автоматически в OTCHETpro
         """.trimIndent()
 
         val intent = Intent(Intent.ACTION_SEND)
-        intent.type = "application/msword"
+        intent.type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         intent.putExtra(Intent.EXTRA_SUBJECT, subject)
         intent.putExtra(Intent.EXTRA_TEXT, body)
-        
+
         if (filePath != null) {
             val file = File(filePath)
             if (file.exists()) {
@@ -297,7 +296,7 @@ class ReportDetailActivity : AppCompatActivity() {
             intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_TEXT, body + "\n\n" + r.text)
         }
-        
+
         startActivity(Intent.createChooser(intent, "Отправить письмо"))
 
         CoroutineScope(Dispatchers.IO).launch {

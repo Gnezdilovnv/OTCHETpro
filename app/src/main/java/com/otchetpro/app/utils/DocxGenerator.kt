@@ -42,10 +42,12 @@ object DocxGenerator {
     }
 
     private fun applyFormatting(paragraph: XWPFParagraph, text: String) {
+        // Сначала экранируем все XML-спецсимволы в тексте,
+        // затем обрабатываем теги форматирования
         var currentIndex = 0
         var isBold = false
         var isItalic = false
-        
+
         while (currentIndex < text.length) {
             when {
                 text.startsWith("<b>", currentIndex) -> { isBold = true; currentIndex += 3 }
@@ -56,7 +58,7 @@ object DocxGenerator {
                     val nextTag = text.indexOf('<', currentIndex)
                     val end = if (nextTag == -1) text.length else nextTag
                     val chunk = text.substring(currentIndex, end)
-                    
+
                     if (chunk.isNotEmpty()) {
                         val run = paragraph.createRun()
                         run.setText(escapeXml(chunk))
@@ -74,7 +76,7 @@ object DocxGenerator {
     fun generateReport(context: Context, text: String, fileName: String): File? {
         return try {
             val doc = XWPFDocument()
-            
+
             val titlePara = doc.createParagraph()
             titlePara.alignment = ParagraphAlignment.CENTER
             val titleRun = titlePara.createRun()
@@ -82,10 +84,10 @@ object DocxGenerator {
             titleRun.isBold = true
             titleRun.fontSize = 16
             titleRun.fontFamily = "Times New Roman"
-            
+
             val emptyPara = doc.createParagraph()
             emptyPara.createRun().setText("")
-            
+
             val para = doc.createParagraph()
             para.alignment = ParagraphAlignment.LEFT
             applyFormatting(para, text)

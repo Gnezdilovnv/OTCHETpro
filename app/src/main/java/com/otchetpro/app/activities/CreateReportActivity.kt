@@ -523,6 +523,7 @@ class CreateReportActivity : AppCompatActivity() {
         }
     }
 
+    // Исправлено: ViewHolder теперь inner class внутри inner class SubDeptAdapter
     inner class SubDeptAdapter(
         private val items: List<String>,
         private val selected: MutableList<String>,

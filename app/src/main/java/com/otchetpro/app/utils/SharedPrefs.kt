@@ -20,7 +20,15 @@ object SharedPrefs {
     fun getTemplates(c: Context): List<Template> {
         synchronized(lock) {
             val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("templates", "[]") ?: "[]"
-            return try { gson.fromJson(j, object : TypeToken<List<Template>>() {}.type) } catch (e: Exception) { emptyList() }
+            val parsed: List<Template> = try { gson.fromJson(j, object : TypeToken<List<Template>>() {}.type) } catch (e: Exception) { emptyList() }
+            if (parsed.isEmpty()) {
+                val defaults = listOf(
+                    Template(id = "tpl_default_1", name = "Боевое донесение", text = "Подразделение: {{Подразделение}}\nРасчет: {{Расчет}}\n\nДата: {{Дата}}\nВремя: {{Время}}\n\nОбстановка: {{Обстановка}}\nДействия: {{Действия}}\nРезультат: {{Результат}}", type = "common", dept = "")
+                )
+                saveTemplates(c, defaults)
+                return defaults
+            }
+            return parsed
         }
     }
     fun saveTemplates(c: Context, l: List<Template>) {
@@ -32,7 +40,19 @@ object SharedPrefs {
     fun getVariables(c: Context): List<Variable> {
         synchronized(lock) {
             val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("vars", "[]") ?: "[]"
-            return try { gson.fromJson(j, object : TypeToken<List<Variable>>() {}.type) } catch (e: Exception) { emptyList() }
+            val parsed: List<Variable> = try { gson.fromJson(j, object : TypeToken<List<Variable>>() {}.type) } catch (e: Exception) { emptyList() }
+            if (parsed.isEmpty()) {
+                val defaults = listOf(
+                    Variable(id = "var_date", name = "Дата", type = "date", required = true, typeGlobal = "common", dept = "", options = emptyList()),
+                    Variable(id = "var_time", name = "Время", type = "text", required = true, typeGlobal = "common", dept = "", options = emptyList()),
+                    Variable(id = "var_situation", name = "Обстановка", type = "text", required = true, typeGlobal = "common", dept = "", options = emptyList()),
+                    Variable(id = "var_actions", name = "Действия", type = "text", required = true, typeGlobal = "common", dept = "", options = emptyList()),
+                    Variable(id = "var_result", name = "Результат", type = "text", required = true, typeGlobal = "common", dept = "", options = emptyList())
+                )
+                saveVariables(c, defaults)
+                return defaults
+            }
+            return parsed
         }
     }
     fun saveVariables(c: Context, l: List<Variable>) {
@@ -73,13 +93,12 @@ object SharedPrefs {
             } catch (e: Exception) {
                 emptyList()
             }
-            return if (parsed.isEmpty()) {
+            if (parsed.isEmpty()) {
                 val defaults = listOf("БпЛА", "Миномет", "Артиллерия", "Танки")
                 saveDepts(c, defaults)
-                defaults
-            } else {
-                parsed
+                return defaults
             }
+            return parsed
         }
     }
     fun saveDepts(c: Context, l: List<String>) {

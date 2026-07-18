@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var filterSaved: Button
     private lateinit var filterSent: Button
     private lateinit var progressBar: ProgressBar
-    
+
     private var dept = "БпЛА"
     private var currentFilter = "all"
     private lateinit var adapter: ReportAdapter
@@ -89,25 +89,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateUI() {
-        val u = when(dept) {
+        val unit = SharedPrefs.getDeptUnit(this, dept) ?: when(dept) {
             "БпЛА" -> "ПВР №2 «Пчела»"
             "Миномет" -> "расчет миномета «ТИГР»"
             "Артиллерия" -> "152-мм гаубица «Гиацинт»"
             "Танки" -> "танковый взвод Т-72"
             else -> ""
         }
-        tvDeptInfo.text = "Текущее подразделение: $dept — $u"
+        tvDeptInfo.text = "Текущее подразделение: $dept — $unit"
         tvTitle.text = "Боевой журнал"
     }
 
     private fun setupListeners() {
-        btnCreate.setOnClickListener { 
+        btnCreate.setOnClickListener {
             startActivity(Intent(this, CreateReportActivity::class.java))
         }
-        btnSettings.setOnClickListener { 
+        btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
-        btnSwitch.setOnClickListener { 
+        btnSwitch.setOnClickListener {
             startActivity(Intent(this, DeptSelectActivity::class.java))
             finish()
         }
@@ -171,7 +171,7 @@ class MainActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
         tvEmpty.visibility = View.GONE
         rv.visibility = View.GONE
-        
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val db = AppDatabase.getInstance(this@MainActivity)
@@ -199,7 +199,7 @@ class MainActivity : AppCompatActivity() {
             "sent" -> all.filter { it.status == "sent" }
             else -> all
         }
-        
+
         if (list.isEmpty()) {
             tvEmpty.visibility = View.VISIBLE
             rv.visibility = View.GONE

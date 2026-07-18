@@ -26,17 +26,17 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var tvSettingsTag: TextView
     private lateinit var tvImportResult: TextView
     private lateinit var tvExportResult: TextView
-    
+
     private lateinit var llSubDepts: LinearLayout
     private lateinit var llTemplates: LinearLayout
     private lateinit var llVars: LinearLayout
     private lateinit var llRecipients: LinearLayout
     private lateinit var llDepts: LinearLayout
-    
+
     private lateinit var etSubDeptNew: EditText
     private lateinit var etRecipientName: EditText
     private lateinit var etRecipientEmail: EditText
-    
+
     private lateinit var btnImport: Button
     private lateinit var btnExport: Button
     private lateinit var btnTemplateDownload: Button
@@ -69,35 +69,31 @@ class SettingsActivity : AppCompatActivity() {
         tvSettingsTag = findViewById(R.id.tv_settings_tag)
         tvImportResult = findViewById(R.id.tv_import_result)
         tvExportResult = findViewById(R.id.tv_export_result)
-        
-        llDepts = findViewById(R.id.ll_depts_list)
         llSubDepts = findViewById(R.id.ll_subdepts_list)
         llTemplates = findViewById(R.id.ll_templates_list)
         llVars = findViewById(R.id.ll_vars_list)
         llRecipients = findViewById(R.id.ll_recipients_list)
-        
+        llDepts = findViewById(R.id.ll_depts_list)
         etSubDeptNew = findViewById(R.id.et_subdept_new)
         etRecipientName = findViewById(R.id.et_recipient_name)
         etRecipientEmail = findViewById(R.id.et_recipient_email)
-        
         btnImport = findViewById(R.id.btn_import)
         btnExport = findViewById(R.id.btn_export)
         btnTemplateDownload = findViewById(R.id.btn_template_download)
         btnTemplateAdd = findViewById(R.id.btn_template_add)
         btnVarAdd = findViewById(R.id.btn_var_add)
 
+        dept = SharedPrefs.getDept(this)
+        loadData()
+
         findViewById<Button>(R.id.btn_close_settings).setOnClickListener { finish() }
         findViewById<Button>(R.id.btn_subdept_add).setOnClickListener { addSubDept() }
         findViewById<Button>(R.id.btn_recipient_add).setOnClickListener { addRecipient() }
-        
-        btnTemplateAdd.setOnClickListener { 
-            startActivity(Intent(this, TemplateEditorActivity::class.java))
-        }
+        btnTemplateAdd.setOnClickListener { startActivity(Intent(this, TemplateEditorActivity::class.java)) }
         btnVarAdd.setOnClickListener { showAddVariableDialog() }
-        
         btnExport.setOnClickListener { exportSettings() }
-        btnImport.setOnClickListener { openFilePicker() }
         btnTemplateDownload.setOnClickListener { downloadTemplate() }
+        btnImport.setOnClickListener { openFilePicker() }
 
         setupAccordion(R.id.accordion_dept_header, R.id.accordion_dept_body)
         setupAccordion(R.id.accordion_subdepts_header, R.id.accordion_subdepts_body)
@@ -105,7 +101,10 @@ class SettingsActivity : AppCompatActivity() {
         setupAccordion(R.id.accordion_vars_header, R.id.accordion_vars_body)
         setupAccordion(R.id.accordion_recipients_header, R.id.accordion_recipients_body)
         setupAccordion(R.id.accordion_export_header, R.id.accordion_export_body)
+    }
 
+    override fun onResume() {
+        super.onResume()
         loadData()
     }
 
@@ -115,10 +114,10 @@ class SettingsActivity : AppCompatActivity() {
         header.setOnClickListener {
             if (body.visibility == View.VISIBLE) {
                 body.visibility = View.GONE
-                header.text = "▶ " + header.text.toString().substring(2)
+                header.text = header.text.toString().replace("▼", "▶")
             } else {
                 body.visibility = View.VISIBLE
-                header.text = "▼ " + header.text.toString().substring(2)
+                header.text = header.text.toString().replace("▶", "▼")
             }
         }
     }
@@ -126,34 +125,28 @@ class SettingsActivity : AppCompatActivity() {
     private fun loadData() {
         dept = SharedPrefs.getDept(this)
         allDepts = SharedPrefs.getDepts(this).toMutableList()
-        if (allDepts.isEmpty()) {
-            allDepts = listOf("БпЛА", "Миномет", "Артиллерия", "Танки").toMutableList()
-        }
-        
-        tvDeptInfo.text = "Настройки для подразделения: $dept"
-        
         subDepts = SharedPrefs.getSubDepts(this).toMutableList()
-        templates = SharedPrefs.getTemplates(this).filter { it.dept == dept || it.type == "common" }.toMutableList()
-        variables = SharedPrefs.getVariables(this).filter { it.dept == dept || it.typeGlobal == "common" }.toMutableList()
+        templates = SharedPrefs.getTemplates(this).toMutableList()
+        variables = SharedPrefs.getVariables(this).toMutableList()
         recipients = SharedPrefs.getRecipients(this).toMutableList()
+
+        tvDeptInfo.text = "Настройки для подразделения: $dept"
+        val unit = SharedPrefs.getDeptUnit(this, dept) ?: getDefaultUnit(dept)
+        tvSettingsTag.text = "$dept — $unit"
+        tvSettingsInfo.text = "${allDepts.size} подразделений · ${subDepts.size} соисполнителей · ${templates.size} шаблонов · ${variables.size} переменных"
 
         renderDepts()
         renderSubDepts()
         renderTemplates()
         renderVariables()
         renderRecipients()
-
-        val unit = SharedPrefs.getDeptUnit(this, dept) ?: getDefaultUnit(dept)
-        tvSettingsInfo.text = 
-            "${allDepts.size} подразделений · ${subDepts.size} соисполнителей · ${templates.size} шаблонов · ${variables.size} переменных"
-        tvSettingsTag.text = "$dept — $unit"
     }
 
     private fun renderDepts() {
         llDepts.removeAllViews()
         allDepts.forEachIndexed { i, name ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
-            val tv = TextView(this).apply { 
+            val tv = TextView(this).apply {
                 text = name
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 textSize = 14f
@@ -216,9 +209,9 @@ class SettingsActivity : AppCompatActivity() {
             row.addView(deleteBtn)
             llDepts.addView(row)
         }
-        
+
         val addDeptRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 8, 0, 0) }
-        val addDeptInput = EditText(this).apply { 
+        val addDeptInput = EditText(this).apply {
             hint = "Название нового подразделения"
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
@@ -250,7 +243,7 @@ class SettingsActivity : AppCompatActivity() {
         llSubDepts.removeAllViews()
         subDepts.forEachIndexed { i, name ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
-            val tv = TextView(this).apply { 
+            val tv = TextView(this).apply {
                 text = name
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 textSize = 14f
@@ -300,22 +293,22 @@ class SettingsActivity : AppCompatActivity() {
         llTemplates.removeAllViews()
         templates.forEachIndexed { i, t ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 8, 0, 8) }
-            val nameTv = TextView(this).apply { 
+            val nameTv = TextView(this).apply {
                 text = t.name + if (t.type == "common") " (общий)" else " (подразделения)"
                 textSize = 14f
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
             }
             row.addView(nameTv)
-            val previewTv = TextView(this).apply { 
+            val previewTv = TextView(this).apply {
                 text = t.text.take(60) + if (t.text.length > 60) "..." else ""
                 textSize = 12f
                 setTextColor(0xFF6F85A5.toInt())
             }
             row.addView(previewTv)
             val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            val editBtn = Button(this).apply { 
+            val editBtn = Button(this).apply {
                 text = "✎ Редактировать"
-                setOnClickListener { 
+                setOnClickListener {
                     val intent = Intent(this@SettingsActivity, TemplateEditorActivity::class.java)
                     intent.putExtra("template_id", t.id)
                     intent.putExtra("template_name", t.name)
@@ -324,7 +317,7 @@ class SettingsActivity : AppCompatActivity() {
                     startActivity(intent)
                 }
             }
-            val deleteBtn = Button(this).apply { 
+            val deleteBtn = Button(this).apply {
                 text = "✕ Удалить"
                 setOnClickListener {
                     showDeleteConfirmDialog(
@@ -351,12 +344,12 @@ class SettingsActivity : AppCompatActivity() {
         variables.forEachIndexed { i, v ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 4, 0, 4) }
             val headerRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            val tv = TextView(this).apply { 
+            val tv = TextView(this).apply {
                 text = v.name + if (v.required) " *" else ""
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 textSize = 14f
             }
-            val typeTv = TextView(this).apply { 
+            val typeTv = TextView(this).apply {
                 text = " (${VariableTypes.displayNames[v.type] ?: v.type})"
                 textSize = 11f
                 setTextColor(0xFF6F85A5.toInt())
@@ -374,7 +367,7 @@ class SettingsActivity : AppCompatActivity() {
             headerRow.addView(tv)
             headerRow.addView(typeTv)
             headerRow.addView(scopeTv)
-            
+
             val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             val editBtn = Button(this).apply {
                 text = "✎"
@@ -397,7 +390,7 @@ class SettingsActivity : AppCompatActivity() {
             }
             btnRow.addView(editBtn)
             btnRow.addView(deleteBtn)
-            
+
             row.addView(headerRow)
             row.addView(btnRow)
             llVars.addView(row)
@@ -408,11 +401,11 @@ class SettingsActivity : AppCompatActivity() {
         llRecipients.removeAllViews()
         recipients.forEachIndexed { i, r ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
-            val tv = TextView(this).apply { 
+            val tv = TextView(this).apply {
                 text = "${r.name} (${r.email})"
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
-            val deleteBtn = Button(this).apply { 
+            val deleteBtn = Button(this).apply {
                 text = "✕"
                 setOnClickListener {
                     showDeleteConfirmDialog(
@@ -490,24 +483,24 @@ class SettingsActivity : AppCompatActivity() {
         val typeAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, typeItems)
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         tp.adapter = typeAdapter
-        
+
         val scopeSpinner = Spinner(this)
         val scopeItems = listOf("Общая", "Подразделение", "Расчет")
         val scopeAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, scopeItems)
         scopeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         scopeSpinner.adapter = scopeAdapter
-        
+
         val deptSpinner = Spinner(this)
         val deptAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, allDepts)
         deptAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         deptSpinner.adapter = deptAdapter
         deptSpinner.visibility = View.GONE
-        
-        val optionsInput = EditText(this).apply { 
+
+        val optionsInput = EditText(this).apply {
             hint = "Варианты через запятую (для списка)"
             visibility = View.GONE
         }
-        
+
         tp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val type = VariableTypes.all[position]
@@ -519,16 +512,16 @@ class SettingsActivity : AppCompatActivity() {
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-        
+
         scopeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 deptSpinner.visibility = if (position == 1 || position == 2) View.VISIBLE else View.GONE
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-        
+
         val ck = CheckBox(this).apply { text = "Обязательное" }
-        val ct = LinearLayout(this).apply { 
+        val ct = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(nm)
             addView(tp)
@@ -537,7 +530,7 @@ class SettingsActivity : AppCompatActivity() {
             addView(optionsInput)
             addView(ck)
         }
-        
+
         AlertDialog.Builder(this).setTitle("Добавить переменную").setView(ct)
             .setPositiveButton("Сохранить") { _, _ ->
                 val name = nm.text.toString().trim()
@@ -561,7 +554,7 @@ class SettingsActivity : AppCompatActivity() {
                     optionsInput.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }
                 } else emptyList()
                 val selectedDept = if (scope == "common") "" else deptSpinner.selectedItem.toString()
-                
+
                 variables.add(Variable(
                     id = UUID.randomUUID().toString(),
                     name = name,
@@ -588,7 +581,7 @@ class SettingsActivity : AppCompatActivity() {
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         tp.adapter = typeAdapter
         tp.setSelection(VariableTypes.all.indexOf(v.type))
-        
+
         val scopeSpinner = Spinner(this)
         val scopeItems = listOf("Общая", "Подразделение", "Расчет")
         val scopeAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, scopeItems)
@@ -601,7 +594,7 @@ class SettingsActivity : AppCompatActivity() {
             else -> 0
         }
         scopeSpinner.setSelection(scopeIndex)
-        
+
         val deptSpinner = Spinner(this)
         val deptAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, allDepts)
         deptAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -609,13 +602,13 @@ class SettingsActivity : AppCompatActivity() {
         val deptIdx = allDepts.indexOf(v.dept)
         if (deptIdx >= 0) deptSpinner.setSelection(deptIdx)
         deptSpinner.visibility = if (v.typeGlobal == "dept" || v.typeGlobal == "unit") View.VISIBLE else View.GONE
-        
+
         val optionsInput = EditText(this).apply {
             hint = "Варианты через запятую (для списка)"
             setText(v.options.joinToString(", "))
             visibility = if (v.type == VariableTypes.SELECT || v.type == VariableTypes.MULTISELECT) View.VISIBLE else View.GONE
         }
-        
+
         tp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val type = VariableTypes.all[position]
@@ -627,16 +620,16 @@ class SettingsActivity : AppCompatActivity() {
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-        
+
         scopeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 deptSpinner.visibility = if (position == 1 || position == 2) View.VISIBLE else View.GONE
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-        
+
         val ck = CheckBox(this).apply { isChecked = v.required; text = "Обязательное" }
-        val ct = LinearLayout(this).apply { 
+        val ct = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(nm)
             addView(tp)
@@ -645,7 +638,7 @@ class SettingsActivity : AppCompatActivity() {
             addView(optionsInput)
             addView(ck)
         }
-        
+
         AlertDialog.Builder(this).setTitle("Редактировать переменную").setView(ct)
             .setPositiveButton("Сохранить") { _, _ ->
                 val name = nm.text.toString().trim()
@@ -664,7 +657,7 @@ class SettingsActivity : AppCompatActivity() {
                     optionsInput.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }
                 } else emptyList()
                 val selectedDept = if (scope == "common") "" else deptSpinner.selectedItem.toString()
-                
+
                 variables[index] = v.copy(
                     name = name,
                     type = type,
@@ -695,7 +688,6 @@ class SettingsActivity : AppCompatActivity() {
             val inputStream = contentResolver.openInputStream(uri)
             val json = inputStream?.bufferedReader()?.readText()
             inputStream?.close()
-            
             if (json != null) {
                 val data = Gson().fromJson(json, Map::class.java)
                 doImport(data)
@@ -712,63 +704,83 @@ class SettingsActivity : AppCompatActivity() {
     @Suppress("UNCHECKED_CAST")
     private fun doImport(data: Map<*, *>) {
         try {
+            // Импорт подразделений — добавляем новые, не заменяем существующие
             val importedDepts = data["allDepts"] as? List<String>
-            if (importedDepts != null && importedDepts.isNotEmpty()) {
-                allDepts.clear()
-                allDepts.addAll(importedDepts)
+            if (importedDepts != null) {
+                importedDepts.forEach { name ->
+                    if (!allDepts.contains(name)) {
+                        allDepts.add(name)
+                    }
+                }
                 SharedPrefs.saveDepts(this, allDepts)
             }
 
+            // Импорт соисполнителей — добавляем новые
             val importedSubDepts = data["subDepts"] as? List<String>
             if (importedSubDepts != null) {
-                subDepts.clear()
-                subDepts.addAll(importedSubDepts)
+                importedSubDepts.forEach { name ->
+                    if (!subDepts.contains(name)) {
+                        subDepts.add(name)
+                    }
+                }
                 SharedPrefs.saveSubDepts(this, subDepts)
             }
 
+            // Импорт шаблонов — добавляем новые
             val importedTemplates = data["templates"] as? List<Map<String, Any>>
             if (importedTemplates != null) {
-                val newTemplates = importedTemplates.map { 
-                    Template(
-                        id = UUID.randomUUID().toString(),
-                        name = it["name"] as? String ?: "",
-                        text = it["text"] as? String ?: "",
-                        type = it["type"] as? String ?: "own",
-                        dept = if ((it["type"] as? String) == "common") "" else dept
-                    )
+                importedTemplates.forEach { t ->
+                    val tName = t["name"] as? String ?: ""
+                    val exists = templates.any { it.name == tName }
+                    if (!exists) {
+                        templates.add(Template(
+                            id = UUID.randomUUID().toString(),
+                            name = tName,
+                            text = t["text"] as? String ?: "",
+                            type = t["type"] as? String ?: "own",
+                            dept = if ((t["type"] as? String) == "common") "" else dept
+                        ))
+                    }
                 }
-                templates.addAll(newTemplates)
                 SharedPrefs.saveTemplates(this, templates)
             }
 
+            // Импорт переменных — добавляем новые
             val importedVariables = data["variables"] as? List<Map<String, Any>>
             if (importedVariables != null) {
-                val newVariables = importedVariables.map {
-                    Variable(
-                        id = UUID.randomUUID().toString(),
-                        name = it["name"] as? String ?: "",
-                        type = it["type"] as? String ?: "text",
-                        required = it["required"] as? Boolean ?: false,
-                        typeGlobal = it["typeGlobal"] as? String ?: "common",
-                        dept = it["dept"] as? String ?: "",
-                        options = (it["options"] as? List<String>) ?: emptyList()
-                    )
+                importedVariables.forEach { v ->
+                    val vName = v["name"] as? String ?: ""
+                    val exists = variables.any { it.name == vName && it.dept == (v["dept"] as? String ?: "") }
+                    if (!exists) {
+                        variables.add(Variable(
+                            id = UUID.randomUUID().toString(),
+                            name = vName,
+                            type = v["type"] as? String ?: "text",
+                            required = v["required"] as? Boolean ?: false,
+                            typeGlobal = v["typeGlobal"] as? String ?: "common",
+                            dept = v["dept"] as? String ?: "",
+                            options = (v["options"] as? List<String>) ?: emptyList()
+                        ))
+                    }
                 }
-                variables.addAll(newVariables)
                 SharedPrefs.saveVariables(this, variables)
             }
 
+            // Импорт получателей — добавляем новых
             val importedRecipients = data["recipients"] as? List<Map<String, String>>
             if (importedRecipients != null) {
-                val newRecipients = importedRecipients.map {
-                    Recipient(
-                        id = UUID.randomUUID().toString(),
-                        name = it["name"] ?: "",
-                        email = it["email"] ?: "",
-                        dept = dept
-                    )
+                importedRecipients.forEach { r ->
+                    val rEmail = r["email"] ?: ""
+                    val exists = recipients.any { it.email == rEmail }
+                    if (!exists) {
+                        recipients.add(Recipient(
+                            id = UUID.randomUUID().toString(),
+                            name = r["name"] ?: "",
+                            email = rEmail,
+                            dept = dept
+                        ))
+                    }
                 }
-                recipients.addAll(newRecipients)
                 SharedPrefs.saveRecipients(this, recipients)
             }
 
@@ -796,7 +808,7 @@ class SettingsActivity : AppCompatActivity() {
             val fileName = "настройки_${dept}_${dateFormat.format(Date())}.json"
             val file = File(settingsDir, fileName)
             FileOutputStream(file).use { it.write(json.toByteArray()) }
-            
+
             tvExportResult.text = "✅ Выгружено: ${file.absolutePath}"
             tvExportResult.visibility = View.VISIBLE
             Toast.makeText(this, "✅ Выгружено: ${file.absolutePath}", Toast.LENGTH_LONG).show()
@@ -841,7 +853,7 @@ class SettingsActivity : AppCompatActivity() {
             val json = GsonBuilder().setPrettyPrinting().create().toJson(template)
             val file = File(settingsDir, "шаблон_настроек.json")
             FileOutputStream(file).use { it.write(json.toByteArray()) }
-            
+
             tvExportResult.text = "✅ Шаблон скачан: ${file.absolutePath}"
             tvExportResult.visibility = View.VISIBLE
             Toast.makeText(this, "✅ Шаблон скачан: ${file.absolutePath}", Toast.LENGTH_LONG).show()
