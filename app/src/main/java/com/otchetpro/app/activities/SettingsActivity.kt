@@ -130,11 +130,20 @@ class SettingsActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 textSize = 14f
             }
+            // Кнопка расчётов
+            val unitBtn = Button(this).apply {
+                text = "Р"
+                setOnClickListener {
+                    val intent = Intent(this@SettingsActivity, UnitEditorActivity::class.java)
+                    intent.putExtra("dept_name", name)
+                    startActivity(intent)
+                }
+            }
             val editBtn = Button(this).apply {
                 text = "✎"
                 setOnClickListener {
                     val input = EditText(this@SettingsActivity).apply { setText(name) }
-                    AlertDialog.Builder(this@SettingsActivity).setTitle("Редактировать").setView(input)
+                    AlertDialog.Builder(this@SettingsActivity).setTitle("Редактировать подразделение").setView(input)
                         .setPositiveButton("Сохранить") { d, w ->
                             val nn = input.text.toString().trim()
                             if (nn.isNotEmpty() && nn != name) {
@@ -158,7 +167,7 @@ class SettingsActivity : AppCompatActivity() {
                 text = "✕"
                 setOnClickListener {
                     if (allDepts.size <= 1) { Toast.makeText(this@SettingsActivity, "Нельзя удалить последнее", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
-                    showDeleteConfirmDialog("Удалить $name?", "Все данные этого подразделения будут удалены") {
+                    showDeleteConfirmDialog("Удалить $name?", "Все данные подразделения будут удалены") {
                         allDepts.removeAt(i); SharedPrefs.saveDepts(this@SettingsActivity, allDepts)
                         val vl = SharedPrefs.getVariables(this@SettingsActivity).toMutableList(); vl.removeAll { it.dept == name }; SharedPrefs.saveVariables(this@SettingsActivity, vl)
                         val tl = SharedPrefs.getTemplates(this@SettingsActivity).toMutableList(); tl.removeAll { it.dept == name }; SharedPrefs.saveTemplates(this@SettingsActivity, tl)
@@ -167,7 +176,7 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 }
             }
-            row.addView(tv); row.addView(editBtn); row.addView(delBtn); llDepts.addView(row)
+            row.addView(tv); row.addView(unitBtn); row.addView(editBtn); row.addView(delBtn); llDepts.addView(row)
         }
         val addRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 8, 0, 0) }
         val addInput = EditText(this).apply { hint = "Новое подразделение"; layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f) }
