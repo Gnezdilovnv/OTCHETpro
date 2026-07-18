@@ -1,7 +1,10 @@
 package com.otchetpro.app.utils
 
+import android.content.ContentValues
 import android.content.Context
+import android.os.Build
 import android.os.Environment
+import android.provider.MediaStore
 import org.apache.poi.xwpf.usermodel.*
 import java.io.*
 
@@ -42,8 +45,6 @@ object DocxGenerator {
     }
 
     private fun applyFormatting(paragraph: XWPFParagraph, text: String) {
-        // Сначала экранируем все XML-спецсимволы в тексте,
-        // затем обрабатываем теги форматирования
         var currentIndex = 0
         var isBold = false
         var isItalic = false
@@ -94,8 +95,40 @@ object DocxGenerator {
 
             val dir = getReportsDir()
             val f = File(dir, fileName)
-            FileOutputStream(f).use { doc.write(it) }
+
+            // Запись через FileOutputStream с проверкой доступности
+            try {
+                val fos = FileOutputStream(f)
+                doc.write(fos)
+                fos.flush()
+                fos.close()
+            } catch (e: Exception) {
+                // Fallback: запись в кэш приложения
+                val cacheDir = File(context.cacheDir, "reports")
+                if (!cacheDir.exists()) cacheDir.mkdirs()
+                val cacheFile = File(cacheDir, fileName)
+                val fos = FileOutputStream(cacheFile)
+                doc.write(fos)
+                fos.flush()
+                fos.close()
+                doc.close()
+                return cacheFile
+            }
+
             doc.close()
+
+            // Регистрируем файл в MediaStore для видимости
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val values = ContentValues().apply {
+                        put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                        put(MediaStore.Downloads.MIME_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                        put(MediaStore.Downloads.RELATIVE_PATH, "Documents/OTCHETpro/Отчеты")
+                    }
+                    context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                }
+            } catch (_: Exception) {}
+
             f
         } catch (e: Exception) {
             e.printStackTrace()

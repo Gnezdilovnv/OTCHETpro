@@ -52,6 +52,10 @@ class TemplateEditorActivity : AppCompatActivity() {
         allDepts = SharedPrefs.getDepts(this)
         allVariables = SharedPrefs.getVariables(this)
 
+        if (allDepts.isEmpty()) {
+            allDepts = listOf("БпЛА", "Миномет", "Артиллерия", "Танки")
+        }
+
         setupDeptSpinner()
 
         templateId = intent.getStringExtra("template_id")
@@ -82,13 +86,16 @@ class TemplateEditorActivity : AppCompatActivity() {
 
         spinnerDept.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                selectedDept = parent?.getItemAtPosition(position).toString() ?: dept
+                if (position >= 0 && position < allDepts.size) {
+                    selectedDept = allDepts[position]
+                } else {
+                    selectedDept = dept
+                }
                 setupVariableButtons()
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        // Подсветка синтаксиса при изменении текста
         etText.addTextChangedListener(object : android.text.TextWatcher {
             override fun afterTextChanged(s: android.text.Editable?) {
                 if (!isUpdatingText) {
@@ -99,9 +106,7 @@ class TemplateEditorActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
-        // Автодополнение
         setupAutoComplete()
-
         setupVariableButtons()
         highlightSyntax()
 
@@ -116,11 +121,11 @@ class TemplateEditorActivity : AppCompatActivity() {
 
         val currentIndex = allDepts.indexOf(dept)
         if (currentIndex >= 0) spinnerDept.setSelection(currentIndex)
-        selectedDept = spinnerDept.selectedItem.toString()
+        selectedDept = if (allDepts.isNotEmpty()) spinnerDept.selectedItem.toString() else dept
     }
 
     private fun highlightSyntax() {
-        val text = etText.text.toString()
+        val text = etText.text?.toString() ?: return
         val spannable = SpannableString(text)
 
         val pattern = Regex("\\{\\{[^}]+\\}\\}")
