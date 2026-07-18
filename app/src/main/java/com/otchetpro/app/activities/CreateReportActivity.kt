@@ -255,98 +255,102 @@ class CreateReportActivity : AppCompatActivity() {
         }
     }
 
+    // ============================================================
+    // СОЗДАНИЕ ПОЛЯ ВВОДА — ИСПРАВЛЕНО
+    // ============================================================
     private fun createInputField(variable: Variable): View {
+        val context = this@CreateReportActivity
         return when (variable.type) {
             "date" -> {
-                EditText(this).apply {
-                    hint = "ДД.ММ.ГГГГ"
-                    setPadding(12, 12, 12, 12)
-                    setBackgroundResource(android.R.drawable.editbox_background)
-                    setupDateMask(this)
-                    addTextChangedListener(object : android.text.TextWatcher {
-                        override fun afterTextChanged(text: android.text.Editable?) { 
-                            variableValues[variable.name] = text.toString()
-                            updatePreview()
-                            autoSaveDraft()
-                        }
-                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                    })
-                }
+                val editText = EditText(context)
+                editText.hint = "ДД.ММ.ГГГГ"
+                editText.setPadding(12, 12, 12, 12)
+                editText.setBackgroundResource(android.R.drawable.editbox_background)
+                setupDateMask(editText)
+                editText.addTextChangedListener(object : android.text.TextWatcher {
+                    override fun afterTextChanged(text: android.text.Editable?) { 
+                        variableValues[variable.name] = text.toString()
+                        updatePreview()
+                        autoSaveDraft()
+                    }
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                })
+                editText
             }
             "number" -> {
-                EditText(this).apply {
-                    inputType = android.text.InputType.TYPE_CLASS_NUMBER
-                    hint = "Введите число"
-                    setPadding(12, 12, 12, 12)
-                    setBackgroundResource(android.R.drawable.editbox_background)
-                    addTextChangedListener(object : android.text.TextWatcher {
-                        override fun afterTextChanged(text: android.text.Editable?) { 
-                            variableValues[variable.name] = text.toString()
-                            updatePreview()
-                            autoSaveDraft()
-                            validateNumberField(this)
-                        }
-                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                    })
-                }
+                val editText = EditText(context)
+                editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                editText.hint = "Введите число"
+                editText.setPadding(12, 12, 12, 12)
+                editText.setBackgroundResource(android.R.drawable.editbox_background)
+                editText.addTextChangedListener(object : android.text.TextWatcher {
+                    override fun afterTextChanged(text: android.text.Editable?) { 
+                        variableValues[variable.name] = text.toString()
+                        updatePreview()
+                        autoSaveDraft()
+                        validateNumberField(editText)
+                    }
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                })
+                editText
             }
             "select" -> {
-                Spinner(this).apply {
-                    val options = variable.options.toTypedArray()
-                    val spinnerAdapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
-                        if (options.isEmpty()) arrayOf("Нет вариантов") else options)
-                    spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                    this.adapter = spinnerAdapter
-                    setPadding(12, 12, 12, 12)
-                    setBackgroundResource(android.R.drawable.editbox_background)
-                    setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {
-                        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                            val selected = (parent?.adapter as? ArrayAdapter<String>)?.getItem(position) ?: ""
-                            variableValues[variable.name] = selected
-                            updatePreview()
-                            autoSaveDraft()
-                        }
-                        override fun onNothingSelected(parent: AdapterView<*>?) {}
-                    })
-                }
+                val spinner = Spinner(context)
+                val options = variable.options.toTypedArray()
+                val spinnerAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, 
+                    if (options.isEmpty()) arrayOf("Нет вариантов") else options)
+                spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                spinner.adapter = spinnerAdapter
+                spinner.setPadding(12, 12, 12, 12)
+                spinner.setBackgroundResource(android.R.drawable.editbox_background)
+                spinner.setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                        val selected = (parent?.adapter as? ArrayAdapter<String>)?.getItem(position) ?: ""
+                        variableValues[variable.name] = selected
+                        updatePreview()
+                        autoSaveDraft()
+                    }
+                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                })
+                spinner
             }
             "multiselect" -> {
-                Spinner(this).apply {
-                    val options = variable.options.toTypedArray()
-                    val spinnerAdapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, 
-                        if (options.isEmpty()) arrayOf("Нет вариантов") else options)
-                    spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                    this.adapter = spinnerAdapter
-                    setPadding(12, 12, 12, 12)
-                    setBackgroundResource(android.R.drawable.editbox_background)
-                    setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {
-                        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                            val selected = (parent?.adapter as? ArrayAdapter<String>)?.getItem(position) ?: ""
-                            variableValues[variable.name] = selected
-                            updatePreview()
-                            autoSaveDraft()
-                        }
-                        override fun onNothingSelected(parent: AdapterView<*>?) {}
-                    })
-                }
+                val spinner = Spinner(context)
+                val options = variable.options.toTypedArray()
+                val spinnerAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, 
+                    if (options.isEmpty()) arrayOf("Нет вариантов") else options)
+                spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                spinner.adapter = spinnerAdapter
+                spinner.setPadding(12, 12, 12, 12)
+                spinner.setBackgroundResource(android.R.drawable.editbox_background)
+                spinner.setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                        val selected = (parent?.adapter as? ArrayAdapter<String>)?.getItem(position) ?: ""
+                        variableValues[variable.name] = selected
+                        updatePreview()
+                        autoSaveDraft()
+                    }
+                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                })
+                spinner
             }
             else -> {
-                EditText(this).apply {
-                    hint = "Введите значение"
-                    setPadding(12, 12, 12, 12)
-                    setBackgroundResource(android.R.drawable.editbox_background)
-                    addTextChangedListener(object : android.text.TextWatcher {
-                        override fun afterTextChanged(text: android.text.Editable?) { 
-                            variableValues[variable.name] = text.toString()
-                            updatePreview()
-                            autoSaveDraft()
-                        }
-                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                    })
-                }
+                val editText = EditText(context)
+                editText.hint = "Введите значение"
+                editText.setPadding(12, 12, 12, 12)
+                editText.setBackgroundResource(android.R.drawable.editbox_background)
+                editText.addTextChangedListener(object : android.text.TextWatcher {
+                    override fun afterTextChanged(text: android.text.Editable?) { 
+                        variableValues[variable.name] = text.toString()
+                        updatePreview()
+                        autoSaveDraft()
+                    }
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                })
+                editText
             }
         }
     }
