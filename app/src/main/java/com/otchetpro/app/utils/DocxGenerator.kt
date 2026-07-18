@@ -59,7 +59,6 @@ object DocxGenerator {
                     val nextTag = text.indexOf('<', currentIndex)
                     val end = if (nextTag == -1) text.length else nextTag
                     val chunk = text.substring(currentIndex, end)
-
                     if (chunk.isNotEmpty()) {
                         val run = paragraph.createRun()
                         run.setText(escapeXml(chunk))
@@ -93,43 +92,28 @@ object DocxGenerator {
             para.alignment = ParagraphAlignment.LEFT
             applyFormatting(para, text)
 
-            val dir = getReportsDir()
-            val f = File(dir, fileName)
+            // Сохраняем в кэш приложения (гарантированно доступно)
+            val cacheDir = File(context.cacheDir, "reports")
+            if (!cacheDir.exists()) cacheDir.mkdirs()
+            val cacheFile = File(cacheDir, fileName)
 
-            // Запись через FileOutputStream с проверкой доступности
-            try {
-                val fos = FileOutputStream(f)
-                doc.write(fos)
-                fos.flush()
-                fos.close()
-            } catch (e: Exception) {
-                // Fallback: запись в кэш приложения
-                val cacheDir = File(context.cacheDir, "reports")
-                if (!cacheDir.exists()) cacheDir.mkdirs()
-                val cacheFile = File(cacheDir, fileName)
-                val fos = FileOutputStream(cacheFile)
-                doc.write(fos)
-                fos.flush()
-                fos.close()
-                doc.close()
-                return cacheFile
-            }
-
+            val fos = FileOutputStream(cacheFile)
+            doc.write(fos)
+            fos.flush()
+            fos.close()
             doc.close()
 
-            // Регистрируем файл в MediaStore для видимости
+            // Пробуем сохранить в Documents/OTCHETpro/Отчеты
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    val values = ContentValues().apply {
-                        put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-                        put(MediaStore.Downloads.MIME_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-                        put(MediaStore.Downloads.RELATIVE_PATH, "Documents/OTCHETpro/Отчеты")
-                    }
-                    context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                }
-            } catch (_: Exception) {}
+                val reportsDir = getReportsDir()
+                val publicFile = File(reportsDir, fileName)
+                cacheFile.copyTo(publicFile, overwrite = true)
+                return publicFile
+            } catch (e: Exception) {
+                // Не удалось — возвращаем файл из кэша
+            }
 
-            f
+            cacheFile
         } catch (e: Exception) {
             e.printStackTrace()
             null
