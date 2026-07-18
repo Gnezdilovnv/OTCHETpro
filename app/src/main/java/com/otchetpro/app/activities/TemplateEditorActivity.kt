@@ -178,7 +178,7 @@ class TemplateEditorActivity : AppCompatActivity() {
         }
         items.forEach { name ->
             content.addView(Button(this).apply {
-                text = name; textSize = 10f; setPadding(8, 4, 8, 4); layoutParams = LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { setMargins(0, 0, 4, 4) }
+                text = name; textSize = 10f; setPadding(8, 4, 8, 4); layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 4, 4) }
                 setOnClickListener { insertVariable(name) }
             })
         }
