@@ -125,25 +125,29 @@ class SettingsActivity : AppCompatActivity() {
         llDepts.removeAllViews()
         allDepts.forEachIndexed { i, name ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
-            val tv = TextView(this).apply { text = name; layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f); textSize = 14f }
+            val tv = TextView(this).apply {
+                text = name
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                textSize = 14f
+            }
             val editBtn = Button(this).apply {
-                text = "✎"; setOnClickListener {
+                text = "✎"
+                setOnClickListener {
                     val input = EditText(this@SettingsActivity).apply { setText(name) }
                     AlertDialog.Builder(this@SettingsActivity).setTitle("Редактировать").setView(input)
-                        .setPositiveButton("Сохранить") { _, _ ->
+                        .setPositiveButton("Сохранить") { d, w ->
                             val nn = input.text.toString().trim()
                             if (nn.isNotEmpty() && nn != name) {
                                 if (allDepts.contains(nn)) { Toast.makeText(this@SettingsActivity, "❌ Уже существует", Toast.LENGTH_SHORT).show(); return@setPositiveButton }
-                                val old = allDepts[i]
-                                allDepts[i] = nn
+                                val old = allDepts[i]; allDepts[i] = nn
                                 SharedPrefs.saveDepts(this@SettingsActivity, allDepts)
                                 if (dept == old) { SharedPrefs.saveDept(this@SettingsActivity, nn); dept = nn }
-                                val v = SharedPrefs.getVariables(this@SettingsActivity).toMutableList()
-                                v.forEachIndexed { vi, vv -> if (vv.dept == old) v[vi] = vv.copy(dept = nn) }
-                                SharedPrefs.saveVariables(this@SettingsActivity, v)
-                                val t = SharedPrefs.getTemplates(this@SettingsActivity).toMutableList()
-                                t.forEachIndexed { ti, tt -> if (tt.dept == old) t[ti] = tt.copy(dept = nn) }
-                                SharedPrefs.saveTemplates(this@SettingsActivity, t)
+                                val vl = SharedPrefs.getVariables(this@SettingsActivity).toMutableList()
+                                vl.forEachIndexed { vi, vv -> if (vv.dept == old) vl[vi] = vv.copy(dept = nn) }
+                                SharedPrefs.saveVariables(this@SettingsActivity, vl)
+                                val tl = SharedPrefs.getTemplates(this@SettingsActivity).toMutableList()
+                                tl.forEachIndexed { ti, tt -> if (tt.dept == old) tl[ti] = tt.copy(dept = nn) }
+                                SharedPrefs.saveTemplates(this@SettingsActivity, tl)
                                 loadData()
                                 Toast.makeText(this@SettingsActivity, "✅ Обновлено", Toast.LENGTH_SHORT).show()
                             }
@@ -151,12 +155,13 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
             val delBtn = Button(this).apply {
-                text = "✕"; setOnClickListener {
+                text = "✕"
+                setOnClickListener {
                     if (allDepts.size <= 1) { Toast.makeText(this@SettingsActivity, "Нельзя удалить последнее", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
                     showDeleteConfirmDialog("Удалить $name?", "Все данные этого подразделения будут удалены") {
                         allDepts.removeAt(i); SharedPrefs.saveDepts(this@SettingsActivity, allDepts)
-                        val v = SharedPrefs.getVariables(this@SettingsActivity).toMutableList(); v.removeAll { it.dept == name }; SharedPrefs.saveVariables(this@SettingsActivity, v)
-                        val t = SharedPrefs.getTemplates(this@SettingsActivity).toMutableList(); t.removeAll { it.dept == name }; SharedPrefs.saveTemplates(this@SettingsActivity, t)
+                        val vl = SharedPrefs.getVariables(this@SettingsActivity).toMutableList(); vl.removeAll { it.dept == name }; SharedPrefs.saveVariables(this@SettingsActivity, vl)
+                        val tl = SharedPrefs.getTemplates(this@SettingsActivity).toMutableList(); tl.removeAll { it.dept == name }; SharedPrefs.saveTemplates(this@SettingsActivity, tl)
                         if (dept == name) { SharedPrefs.saveDept(this@SettingsActivity, allDepts[0]); dept = allDepts[0] }
                         loadData()
                     }
@@ -165,9 +170,10 @@ class SettingsActivity : AppCompatActivity() {
             row.addView(tv); row.addView(editBtn); row.addView(delBtn); llDepts.addView(row)
         }
         val addRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 8, 0, 0) }
-        val addInput = EditText(this).apply { hint = "Новое подразделение"; layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f) }
+        val addInput = EditText(this).apply { hint = "Новое подразделение"; layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f) }
         val addBtn = Button(this).apply {
-            text = "➕"; setOnClickListener {
+            text = "➕"
+            setOnClickListener {
                 val nn = addInput.text.toString().trim()
                 if (nn.isEmpty()) { Toast.makeText(this@SettingsActivity, "Введите название", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
                 if (allDepts.contains(nn)) { Toast.makeText(this@SettingsActivity, "❌ Уже существует", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
@@ -181,16 +187,22 @@ class SettingsActivity : AppCompatActivity() {
         llSubDepts.removeAllViews()
         subDepts.forEachIndexed { i, name ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
-            val tv = TextView(this).apply { text = name; layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f); textSize = 14f }
+            val tv = TextView(this).apply { text = name; layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); textSize = 14f }
             val editBtn = Button(this).apply {
-                text = "✎"; setOnClickListener {
+                text = "✎"
+                setOnClickListener {
                     val input = EditText(this@SettingsActivity).apply { setText(name) }
                     AlertDialog.Builder(this@SettingsActivity).setTitle("Редактировать").setView(input)
-                        .setPositiveButton("Сохранить") { _, _ -> val nn = input.text.toString().trim(); if (nn.isNotEmpty()) { subDepts[i] = nn; SharedPrefs.saveSubDepts(this@SettingsActivity, subDepts); loadData() } }
-                        .setNegativeButton("Отмена", null).show()
+                        .setPositiveButton("Сохранить") { d, w ->
+                            val nn = input.text.toString().trim()
+                            if (nn.isNotEmpty()) { subDepts[i] = nn; SharedPrefs.saveSubDepts(this@SettingsActivity, subDepts); loadData() }
+                        }.setNegativeButton("Отмена", null).show()
                 }
             }
-            val delBtn = Button(this).apply { text = "✕"; setOnClickListener { showDeleteConfirmDialog("Удалить $name?", "") { subDepts.removeAt(i); SharedPrefs.saveSubDepts(this@SettingsActivity, subDepts); loadData() } } }
+            val delBtn = Button(this).apply {
+                text = "✕"
+                setOnClickListener { showDeleteConfirmDialog("Удалить $name?", "") { subDepts.removeAt(i); SharedPrefs.saveSubDepts(this@SettingsActivity, subDepts); loadData() } }
+            }
             row.addView(tv); row.addView(editBtn); row.addView(delBtn); llSubDepts.addView(row)
         }
     }
@@ -203,8 +215,11 @@ class SettingsActivity : AppCompatActivity() {
             row.addView(TextView(this).apply { text = t.text.take(60) + if (t.text.length > 60) "..." else ""; textSize = 12f; setTextColor(0xFF6F85A5.toInt()) })
             val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             val editBtn = Button(this).apply {
-                text = "✎"; setOnClickListener {
-                    val intent = Intent(this@SettingsActivity, TemplateEditorActivity::class.java).apply { putExtra("template_id", t.id); putExtra("template_name", t.name); putExtra("template_text", t.text); putExtra("template_type", t.type) }
+                text = "✎"
+                setOnClickListener {
+                    val intent = Intent(this@SettingsActivity, TemplateEditorActivity::class.java).apply {
+                        putExtra("template_id", t.id); putExtra("template_name", t.name); putExtra("template_text", t.text); putExtra("template_type", t.type)
+                    }
                     startActivity(intent)
                 }
             }
@@ -218,7 +233,7 @@ class SettingsActivity : AppCompatActivity() {
         variables.forEachIndexed { i, v ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 4, 0, 4) }
             val hRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            hRow.addView(TextView(this).apply { text = "${v.name}${if (v.required) " *" else ""}"; layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f); textSize = 14f })
+            hRow.addView(TextView(this).apply { text = "${v.name}${if (v.required) " *" else ""}"; layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); textSize = 14f })
             hRow.addView(TextView(this).apply { text = " (${VariableTypes.displayNames[v.type] ?: v.type})"; textSize = 11f; setTextColor(0xFF6F85A5.toInt()) })
             val scopeText = when (v.typeGlobal) { "common" -> "[Общая]"; "dept" -> "[${v.dept}]"; "unit" -> "[${v.dept} — расчёт]"; else -> "" }
             hRow.addView(TextView(this).apply { text = scopeText; textSize = 11f; setTextColor(0xFF1A4CBA.toInt()) })
@@ -234,14 +249,15 @@ class SettingsActivity : AppCompatActivity() {
         llRecipients.removeAllViews()
         recipients.forEachIndexed { i, r ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 4, 0, 4) }
-            row.addView(TextView(this).apply { text = "${r.name} (${r.email})"; layoutParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f) })
+            row.addView(TextView(this).apply { text = "${r.name} (${r.email})"; layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f) })
             row.addView(Button(this).apply { text = "✕"; setOnClickListener { showDeleteConfirmDialog("Удалить ${r.name}?", "") { recipients.removeAt(i); SharedPrefs.saveRecipients(this@SettingsActivity, recipients); loadData() } } })
             llRecipients.addView(row)
         }
     }
 
     private fun showDeleteConfirmDialog(title: String, message: String, onConfirm: () -> Unit) {
-        AlertDialog.Builder(this).setTitle(title).setMessage(message).setIcon(android.R.drawable.ic_dialog_alert).setPositiveButton("Удалить") { _, _ -> onConfirm() }.setNegativeButton("Отмена", null).show()
+        AlertDialog.Builder(this).setTitle(title).setMessage(message).setIcon(android.R.drawable.ic_dialog_alert)
+            .setPositiveButton("Удалить") { d, w -> onConfirm() }.setNegativeButton("Отмена", null).show()
     }
 
     private fun addSubDept() {
@@ -260,7 +276,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showAddVariableDialog() = showVariableDialog(null)
-
     private fun showEditVariableDialog(index: Int) = showVariableDialog(index)
 
     private fun showVariableDialog(index: Int?) {
@@ -279,30 +294,32 @@ class SettingsActivity : AppCompatActivity() {
         val deptSp = Spinner(this).apply {
             adapter = ArrayAdapter(this@SettingsActivity, android.R.layout.simple_spinner_item, allDepts).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
             if (isEdit) { val idx = allDepts.indexOf(v!!.dept); if (idx >= 0) setSelection(idx) }
-            visibility = if ((isEdit && v!!.typeGlobal != "common") || (!isEdit && scopeSp.selectedItemPosition != 0)) View.VISIBLE else View.GONE
+            visibility = if (isEdit && v!!.typeGlobal != "common" || !isEdit && scopeSp.selectedItemPosition != 0) View.VISIBLE else View.GONE
         }
         val optsInput = EditText(this).apply {
             hint = "Варианты через запятую (для списка)"
             if (isEdit) setText(v!!.options.joinToString(", "))
-            visibility = if ((isEdit && (v!!.type == VariableTypes.SELECT || v!!.type == VariableTypes.MULTISELECT)) || (!isEdit && VariableTypes.all.getOrNull(tp.selectedItemPosition).let { it == VariableTypes.SELECT || it == VariableTypes.MULTISELECT })) View.VISIBLE else View.GONE
+            visibility = if (isEdit && (v!!.type == VariableTypes.SELECT || v!!.type == VariableTypes.MULTISELECT) || !isEdit && VariableTypes.all.getOrNull(tp.selectedItemPosition).let { it == VariableTypes.SELECT || it == VariableTypes.MULTISELECT }) View.VISIBLE else View.GONE
         }
         val ck = CheckBox(this).apply { text = "Обязательное"; if (isEdit) isChecked = v!!.required }
 
         tp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) {
+            override fun onItemSelected(p: AdapterView<*>?, vw: View?, pos: Int, id: Long) {
                 val t = VariableTypes.all.getOrNull(pos)
                 optsInput.visibility = if (t == VariableTypes.SELECT || t == VariableTypes.MULTISELECT) View.VISIBLE else View.GONE
             }
             override fun onNothingSelected(p: AdapterView<*>?) {}
         }
         scopeSp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { deptSp.visibility = if (pos == 0) View.GONE else View.VISIBLE }
+            override fun onItemSelected(p: AdapterView<*>?, vw: View?, pos: Int, id: Long) {
+                deptSp.visibility = if (pos == 0) View.GONE else View.VISIBLE
+            }
             override fun onNothingSelected(p: AdapterView<*>?) {}
         }
 
         val ct = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(nm); addView(tp); addView(scopeSp); addView(deptSp); addView(optsInput); addView(ck) }
         AlertDialog.Builder(this).setTitle(if (isEdit) "Редактировать" else "Добавить").setView(ct)
-            .setPositiveButton("Сохранить") { _, _ ->
+            .setPositiveButton("Сохранить") { d, w ->
                 val name = nm.text.toString().trim()
                 if (name.isEmpty()) { Toast.makeText(this, "❌ Введите название", Toast.LENGTH_SHORT).show(); return@setPositiveButton }
                 val type = VariableTypes.all[tp.selectedItemPosition]

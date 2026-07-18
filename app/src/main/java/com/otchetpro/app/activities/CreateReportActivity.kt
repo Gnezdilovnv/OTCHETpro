@@ -65,13 +65,13 @@ class CreateReportActivity : AppCompatActivity() {
         generateVariableFields()
 
         spinnerTemplate.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { updatePreview() }
-            override fun onNothingSelected(p: AdapterView<*>?) {}
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) { updatePreview() }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
         btnSave.setOnClickListener { saveReport() }
         btnClose.setOnClickListener {
             if (!isDraftSaved && variableValues.isNotEmpty())
-                AlertDialog.Builder(this).setTitle("Черновик?").setMessage("Сохранить черновик?").setPositiveButton("Да") { _, _ -> saveDraft() }.setNegativeButton("Нет") { _, _ -> finish() }.show()
+                AlertDialog.Builder(this).setTitle("Черновик?").setMessage("Сохранить черновик?").setPositiveButton("Да") { d, w -> saveDraft() }.setNegativeButton("Нет") { d, w -> finish() }.show()
             else finish()
         }
         loadDraft(); updatePreview()
@@ -81,8 +81,10 @@ class CreateReportActivity : AppCompatActivity() {
         spinnerDept.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         val idx = allDepts.indexOf(dept); if (idx >= 0) spinnerDept.setSelection(idx)
         spinnerDept.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { selectedDept = p?.getItemAtPosition(pos).toString() ?: dept; setupUnitSpinner(); updatePreview() }
-            override fun onNothingSelected(p: AdapterView<*>?) {}
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {
+                selectedDept = parent?.getItemAtPosition(pos).toString() ?: dept; setupUnitSpinner(); updatePreview()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
 
@@ -90,8 +92,10 @@ class CreateReportActivity : AppCompatActivity() {
         val units = SharedPrefs.getVariables(this).filter { it.name == "Расчет" && it.dept == selectedDept && it.type == "select" }.flatMap { it.options }
         spinnerUnit.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, if (units.isNotEmpty()) units else listOf("Нет расчетов")).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         spinnerUnit.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { selectedUnit = p?.getItemAtPosition(pos).toString() ?: ""; updatePreview() }
-            override fun onNothingSelected(p: AdapterView<*>?) {}
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {
+                selectedUnit = parent?.getItemAtPosition(pos).toString() ?: ""; updatePreview()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
 
@@ -116,12 +120,10 @@ class CreateReportActivity : AppCompatActivity() {
                 if (updating) return
                 val clean = s.toString().replace(Regex("[^0-9]"), "")
                 if (clean.length >= 8) {
-                    updating = true
-                    et.setText("${clean.substring(0,2)}.${clean.substring(2,4)}.${clean.substring(4,8)}")
+                    updating = true; et.setText("${clean.substring(0,2)}.${clean.substring(2,4)}.${clean.substring(4,8)}")
                     et.setSelection(10); updating = false
                 } else if (clean.length >= 4) {
-                    updating = true
-                    et.setText("${clean.substring(0,2)}.${clean.substring(2)}")
+                    updating = true; et.setText("${clean.substring(0,2)}.${clean.substring(2)}")
                     et.setSelection(clean.length + 1); updating = false
                 }
             }
@@ -132,7 +134,6 @@ class CreateReportActivity : AppCompatActivity() {
 
     private fun generateVariableFields() {
         linearVariables.removeAllViews()
-        // Группируем переменные по типу для удобства
         val common = allVariables.filter { it.typeGlobal == "common" && it.name != "Расчет" }
         val deptVars = allVariables.filter { it.typeGlobal == "dept" && it.dept == selectedDept && it.name != "Расчет" }
         val unitVars = allVariables.filter { it.typeGlobal == "unit" && it.dept == selectedDept && it.name != "Расчет" }
@@ -150,8 +151,7 @@ class CreateReportActivity : AppCompatActivity() {
         vars.forEach { v ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 0, 0, 12) }
             row.addView(TextView(this).apply { text = v.name + if (v.required) " *" else ""; setTextColor(0xFF3A4F6E.toInt()); textSize = 13f })
-            val input = createInputField(v)
-            row.addView(input)
+            row.addView(createInputField(v))
             linearVariables.addView(row)
         }
     }
@@ -163,16 +163,16 @@ class CreateReportActivity : AppCompatActivity() {
             adapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, v.options.ifEmpty { listOf("Нет вариантов") }).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
             setPadding(12, 12, 12, 12); setBackgroundResource(android.R.drawable.editbox_background)
             onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { variableValues[v.name] = (p?.adapter as? ArrayAdapter<String>)?.getItem(pos) ?: ""; updatePreview(); autoSaveDraft() }
-                override fun onNothingSelected(p: AdapterView<*>?) {}
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) { variableValues[v.name] = (parent?.adapter as? ArrayAdapter<String>)?.getItem(pos) ?: ""; updatePreview(); autoSaveDraft() }
+                override fun onNothingSelected(parent: AdapterView<*>?) {}
             }
         }
         "multiselect" -> Spinner(this).apply {
             adapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, v.options.ifEmpty { listOf("Нет вариантов") }).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
             setPadding(12, 12, 12, 12); setBackgroundResource(android.R.drawable.editbox_background)
             onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { variableValues[v.name] = (p?.adapter as? ArrayAdapter<String>)?.getItem(pos) ?: ""; updatePreview(); autoSaveDraft() }
-                override fun onNothingSelected(p: AdapterView<*>?) {}
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) { variableValues[v.name] = (parent?.adapter as? ArrayAdapter<String>)?.getItem(pos) ?: ""; updatePreview(); autoSaveDraft() }
+                override fun onNothingSelected(parent: AdapterView<*>?) {}
             }
         }
         else -> EditText(this).apply { hint = "Введите значение"; setPadding(12, 12, 12, 12); setBackgroundResource(android.R.drawable.editbox_background); addListener(v.name) }
@@ -219,7 +219,7 @@ class CreateReportActivity : AppCompatActivity() {
             val di = allDepts.indexOf(p.getString("dept", "")); if (di >= 0) spinnerDept.setSelection(di)
             val ti = p.getInt("tpl", 0); if (ti < templates.size) spinnerTemplate.setSelection(ti)
             Toast.makeText(this, "💾 Черновик восстановлен", Toast.LENGTH_SHORT).show()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {}
     }
 
     private fun saveDraft() { autoSaveDraft(); finish() }
@@ -265,7 +265,7 @@ class CreateReportActivity : AppCompatActivity() {
         override fun onCreateViewHolder(p: ViewGroup, t: Int) = ViewHolder(LayoutInflater.from(p.context).inflate(R.layout.item_subdept_check, p, false))
         override fun onBindViewHolder(h: ViewHolder, pos: Int) {
             h.checkBox.text = items[pos]; h.checkBox.isChecked = selected.contains(items[pos])
-            h.checkBox.setOnCheckedChangeListener { _, ok -> if (ok) selected.add(items[pos]) else selected.remove(items[pos]); onUpdate(selected) }
+            h.checkBox.setOnCheckedChangeListener { btn, ok -> if (ok) selected.add(items[pos]) else selected.remove(items[pos]); onUpdate(selected) }
         }
         override fun getItemCount() = items.size
     }
