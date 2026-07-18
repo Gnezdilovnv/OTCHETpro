@@ -60,499 +60,213 @@ class CreateReportActivity : AppCompatActivity() {
 
         dept = SharedPrefs.getDept(this)
         allDepts = SharedPrefs.getDepts(this)
-
-        setupDeptSpinner()
-        setupUnitSpinner()
-        setupTemplateSpinner()
-        setupSubDepts()
-
-        allVariables = SharedPrefs.getVariables(this).filter {
-            it.dept == dept || it.typeGlobal == "common" || it.typeGlobal == "dept"
-        }
+        setupDeptSpinner(); setupUnitSpinner(); setupTemplateSpinner(); setupSubDepts()
+        allVariables = SharedPrefs.getVariables(this).filter { it.dept == dept || it.typeGlobal == "common" || it.typeGlobal == "dept" }
         generateVariableFields()
 
         spinnerTemplate.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                updatePreview()
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { updatePreview() }
+            override fun onNothingSelected(p: AdapterView<*>?) {}
         }
-
         btnSave.setOnClickListener { saveReport() }
         btnClose.setOnClickListener {
-            if (!isDraftSaved && variableValues.isNotEmpty()) {
-                AlertDialog.Builder(this)
-                    .setTitle("Сохранить черновик?")
-                    .setMessage("У вас есть незаполненные данные. Сохранить их как черновик?")
-                    .setPositiveButton("Сохранить") { _, _ -> saveDraft() }
-                    .setNegativeButton("Не сохранять") { _, _ -> finish() }
-                    .show()
-            } else {
-                finish()
-            }
+            if (!isDraftSaved && variableValues.isNotEmpty())
+                AlertDialog.Builder(this).setTitle("Черновик?").setMessage("Сохранить черновик?").setPositiveButton("Да") { _, _ -> saveDraft() }.setNegativeButton("Нет") { _, _ -> finish() }.show()
+            else finish()
         }
-
-        loadDraft()
-        updatePreview()
+        loadDraft(); updatePreview()
     }
 
     private fun setupDeptSpinner() {
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerDept.adapter = adapter
-
-        val currentIndex = allDepts.indexOf(dept)
-        if (currentIndex >= 0) spinnerDept.setSelection(currentIndex)
-
+        spinnerDept.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, allDepts).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        val idx = allDepts.indexOf(dept); if (idx >= 0) spinnerDept.setSelection(idx)
         spinnerDept.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                selectedDept = parent?.getItemAtPosition(position).toString() ?: dept
-                setupUnitSpinner()
-                updatePreview()
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { selectedDept = p?.getItemAtPosition(pos).toString() ?: dept; setupUnitSpinner(); updatePreview() }
+            override fun onNothingSelected(p: AdapterView<*>?) {}
         }
     }
 
     private fun setupUnitSpinner() {
-        val unitVars = SharedPrefs.getVariables(this).filter {
-            it.name == "Расчет" && it.dept == selectedDept && it.type == "select"
-        }
-        val options = if (unitVars.isNotEmpty()) {
-            unitVars.first().options
-        } else {
-            listOf("Нет расчетов")
-        }
-
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerUnit.adapter = adapter
-
+        val units = SharedPrefs.getVariables(this).filter { it.name == "Расчет" && it.dept == selectedDept && it.type == "select" }.flatMap { it.options }
+        spinnerUnit.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, if (units.isNotEmpty()) units else listOf("Нет расчетов")).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         spinnerUnit.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                selectedUnit = parent?.getItemAtPosition(position).toString() ?: ""
-                updatePreview()
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { selectedUnit = p?.getItemAtPosition(pos).toString() ?: ""; updatePreview() }
+            override fun onNothingSelected(p: AdapterView<*>?) {}
         }
     }
 
     private fun setupTemplateSpinner() {
-        val allTemplates = SharedPrefs.getTemplates(this)
-        templates = allTemplates.filter { it.dept == dept || it.type == "common" }
-        val templateNames = templates.map { it.name }
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, templateNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerTemplate.adapter = adapter
+        templates = SharedPrefs.getTemplates(this).filter { it.dept == dept || it.type == "common" }
+        spinnerTemplate.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, templates.map { it.name }).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
     }
 
     private fun setupSubDepts() {
-        val allUnits = SharedPrefs.getAllUnits(this)
-        val grouped = allUnits.groupBy { it.first }
-        val items = grouped.flatMap { (deptName, units) ->
-            units.map { "${deptName}: ${it.second}" }
-        }
-
+        val items = SharedPrefs.getAllUnits(this).groupBy { it.first }.flatMap { (d, u) -> u.map { "$d: ${it.second}" } }
         if (items.isNotEmpty()) {
-            rvSubDepts.visibility = View.VISIBLE
-            tvSubDeptsHint.visibility = View.VISIBLE
-
-            val adapter = SubDeptAdapter(
-                items = items,
-                selected = selectedSubDepts,
-                onUpdate = { updated ->
-                    selectedSubDepts = updated
-                    tvSubDeptsHint.text = "Выбрано: ${selectedSubDepts.size} соисполнителей"
-                    updatePreview()
-                }
-            )
+            rvSubDepts.visibility = View.VISIBLE; tvSubDeptsHint.visibility = View.VISIBLE
             rvSubDepts.layoutManager = LinearLayoutManager(this)
-            rvSubDepts.adapter = adapter
-        } else {
-            rvSubDepts.visibility = View.GONE
-            tvSubDeptsHint.visibility = View.GONE
-        }
+            rvSubDepts.adapter = SubDeptAdapter(items, selectedSubDepts) { selectedSubDepts = it; tvSubDeptsHint.text = "Выбрано: ${it.size}"; updatePreview() }
+        } else { rvSubDepts.visibility = View.GONE; tvSubDeptsHint.visibility = View.GONE }
     }
 
-    private fun setupDateMask(editText: EditText) {
-        editText.addTextChangedListener(object : TextWatcher {
-            private var isUpdating = false
-
+    private fun setupDateMask(et: EditText) {
+        et.addTextChangedListener(object : TextWatcher {
+            private var updating = false
             override fun afterTextChanged(s: Editable?) {
-                if (isUpdating) return
-                val text = s.toString()
-                val clean = text.replace(Regex("[^0-9]"), "")
-
+                if (updating) return
+                val clean = s.toString().replace(Regex("[^0-9]"), "")
                 if (clean.length >= 8) {
-                    val day = clean.substring(0, 2).toIntOrNull() ?: 0
-                    val month = clean.substring(2, 4).toIntOrNull() ?: 0
-                    val year = clean.substring(4, 8).toIntOrNull() ?: 0
-
-                    if (day in 1..31 && month in 1..12 && year in 1900..2100) {
-                        editText.error = null
-                    } else {
-                        editText.error = "Некорректная дата"
-                    }
-
-                    isUpdating = true
-                    val formatted = "${clean.substring(0,2)}.${clean.substring(2,4)}.${clean.substring(4,8)}"
-                    editText.setText(formatted)
-                    editText.setSelection(formatted.length)
-                    isUpdating = false
-                } else if (clean.length >= 4 && clean.length < 6) {
-                    isUpdating = true
-                    val formatted = "${clean.substring(0,2)}.${clean.substring(2)}"
-                    editText.setText(formatted)
-                    editText.setSelection(formatted.length)
-                    isUpdating = false
+                    updating = true
+                    et.setText("${clean.substring(0,2)}.${clean.substring(2,4)}.${clean.substring(4,8)}")
+                    et.setSelection(10); updating = false
+                } else if (clean.length >= 4) {
+                    updating = true
+                    et.setText("${clean.substring(0,2)}.${clean.substring(2)}")
+                    et.setSelection(clean.length + 1); updating = false
                 }
             }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
         })
-    }
-
-    private fun validateNumberField(editText: EditText): Boolean {
-        val text = editText.text.toString()
-        if (text.isEmpty()) return true
-        return try {
-            text.toDouble()
-            editText.error = null
-            true
-        } catch (e: NumberFormatException) {
-            editText.error = "Введите число"
-            false
-        }
     }
 
     private fun generateVariableFields() {
         linearVariables.removeAllViews()
+        // Группируем переменные по типу для удобства
+        val common = allVariables.filter { it.typeGlobal == "common" && it.name != "Расчет" }
+        val deptVars = allVariables.filter { it.typeGlobal == "dept" && it.dept == selectedDept && it.name != "Расчет" }
+        val unitVars = allVariables.filter { it.typeGlobal == "unit" && it.dept == selectedDept && it.name != "Расчет" }
 
-        allVariables.forEach { variable ->
-            if (variable.name == "Расчет") return@forEach
+        if (common.isNotEmpty()) addSection("Общие переменные", common)
+        if (deptVars.isNotEmpty()) addSection("Подразделение: $selectedDept", deptVars)
+        if (unitVars.isNotEmpty()) addSection("Расчёт: ${if (selectedUnit != "Нет расчетов") selectedUnit else ""}", unitVars)
+        if (common.isEmpty() && deptVars.isEmpty() && unitVars.isEmpty()) {
+            linearVariables.addView(TextView(this).apply { text = "Нет переменных для заполнения. Добавьте в настройках."; setPadding(8, 16, 8, 16); setTextColor(0xFF6F85A5.toInt()) })
+        }
+    }
 
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(0, 0, 0, 16)
-            }
-
-            val label = TextView(this).apply {
-                text = variable.name + if (variable.required) " *" else ""
-                setTextColor(0xFF0B1A2F.toInt())
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
-            }
-            row.addView(label)
-
-            val inputField = createInputField(variable)
-            row.addView(inputField)
-
-            val hint = TextView(this).apply {
-                text = if (variable.required) "Обязательное поле" else "Необязательное поле"
-                textSize = 11f
-                setTextColor(0xFF6F85A5.toInt())
-            }
-            row.addView(hint)
+    private fun addSection(title: String, vars: List<Variable>) {
+        linearVariables.addView(TextView(this).apply { text = title; textSize = 13f; setTextColor(0xFF0B1A2F.toInt()); typeface = android.graphics.Typeface.DEFAULT_BOLD; setPadding(0, 16, 0, 8) })
+        vars.forEach { v ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 0, 0, 12) }
+            row.addView(TextView(this).apply { text = v.name + if (v.required) " *" else ""; setTextColor(0xFF3A4F6E.toInt()); textSize = 13f })
+            val input = createInputField(v)
+            row.addView(input)
             linearVariables.addView(row)
         }
     }
 
-    private fun createInputField(variable: Variable): View {
-        val context = this@CreateReportActivity
-        return when (variable.type) {
-            "date" -> {
-                val editText = EditText(context)
-                editText.hint = "ДД.ММ.ГГГГ"
-                editText.setPadding(12, 12, 12, 12)
-                editText.setBackgroundResource(android.R.drawable.editbox_background)
-                setupDateMask(editText)
-                editText.addTextChangedListener(object : android.text.TextWatcher {
-                    override fun afterTextChanged(text: android.text.Editable?) {
-                        variableValues[variable.name] = text.toString()
-                        updatePreview()
-                        autoSaveDraft()
-                    }
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                })
-                editText
-            }
-            "number" -> {
-                val editText = EditText(context)
-                editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER
-                editText.hint = "Введите число"
-                editText.setPadding(12, 12, 12, 12)
-                editText.setBackgroundResource(android.R.drawable.editbox_background)
-                editText.addTextChangedListener(object : android.text.TextWatcher {
-                    override fun afterTextChanged(text: android.text.Editable?) {
-                        variableValues[variable.name] = text.toString()
-                        updatePreview()
-                        autoSaveDraft()
-                        validateNumberField(editText)
-                    }
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                })
-                editText
-            }
-            "select" -> {
-                val spinner = Spinner(context)
-                val options = variable.options.toTypedArray()
-                val spinnerAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item,
-                    if (options.isEmpty()) arrayOf("Нет вариантов") else options)
-                spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                spinner.adapter = spinnerAdapter
-                spinner.setPadding(12, 12, 12, 12)
-                spinner.setBackgroundResource(android.R.drawable.editbox_background)
-                spinner.setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                        val selected = (parent?.adapter as? ArrayAdapter<String>)?.getItem(position) ?: ""
-                        variableValues[variable.name] = selected
-                        updatePreview()
-                        autoSaveDraft()
-                    }
-                    override fun onNothingSelected(parent: AdapterView<*>?) {}
-                })
-                spinner
-            }
-            "multiselect" -> {
-                val spinner = Spinner(context)
-                val options = variable.options.toTypedArray()
-                val spinnerAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item,
-                    if (options.isEmpty()) arrayOf("Нет вариантов") else options)
-                spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                spinner.adapter = spinnerAdapter
-                spinner.setPadding(12, 12, 12, 12)
-                spinner.setBackgroundResource(android.R.drawable.editbox_background)
-                spinner.setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                        val selected = (parent?.adapter as? ArrayAdapter<String>)?.getItem(position) ?: ""
-                        variableValues[variable.name] = selected
-                        updatePreview()
-                        autoSaveDraft()
-                    }
-                    override fun onNothingSelected(parent: AdapterView<*>?) {}
-                })
-                spinner
-            }
-            else -> {
-                val editText = EditText(context)
-                editText.hint = "Введите значение"
-                editText.setPadding(12, 12, 12, 12)
-                editText.setBackgroundResource(android.R.drawable.editbox_background)
-                editText.addTextChangedListener(object : android.text.TextWatcher {
-                    override fun afterTextChanged(text: android.text.Editable?) {
-                        variableValues[variable.name] = text.toString()
-                        updatePreview()
-                        autoSaveDraft()
-                    }
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                })
-                editText
+    private fun createInputField(v: Variable): View = when (v.type) {
+        "date" -> EditText(this).apply { hint = "ДД.ММ.ГГГГ"; setPadding(12, 12, 12, 12); setBackgroundResource(android.R.drawable.editbox_background); setupDateMask(this); addListener(v.name) }
+        "number" -> EditText(this).apply { inputType = android.text.InputType.TYPE_CLASS_NUMBER; hint = "Число"; setPadding(12, 12, 12, 12); setBackgroundResource(android.R.drawable.editbox_background); addListener(v.name) }
+        "select" -> Spinner(this).apply {
+            adapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, v.options.ifEmpty { listOf("Нет вариантов") }).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+            setPadding(12, 12, 12, 12); setBackgroundResource(android.R.drawable.editbox_background)
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { variableValues[v.name] = (p?.adapter as? ArrayAdapter<String>)?.getItem(pos) ?: ""; updatePreview(); autoSaveDraft() }
+                override fun onNothingSelected(p: AdapterView<*>?) {}
             }
         }
+        "multiselect" -> Spinner(this).apply {
+            adapter = ArrayAdapter(this@CreateReportActivity, android.R.layout.simple_spinner_item, v.options.ifEmpty { listOf("Нет вариантов") }).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+            setPadding(12, 12, 12, 12); setBackgroundResource(android.R.drawable.editbox_background)
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(p: AdapterView<*>?, _: View?, pos: Int, _: Long) { variableValues[v.name] = (p?.adapter as? ArrayAdapter<String>)?.getItem(pos) ?: ""; updatePreview(); autoSaveDraft() }
+                override fun onNothingSelected(p: AdapterView<*>?) {}
+            }
+        }
+        else -> EditText(this).apply { hint = "Введите значение"; setPadding(12, 12, 12, 12); setBackgroundResource(android.R.drawable.editbox_background); addListener(v.name) }
+    }
+
+    private fun EditText.addListener(name: String) {
+        addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) { variableValues[name] = s.toString(); updatePreview(); autoSaveDraft() }
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+        })
     }
 
     private fun updatePreview() {
-        val position = spinnerTemplate.selectedItemPosition
-        if (position < 0 || position >= templates.size) {
-            tvPreview.text = "Выберите шаблон"
-            return
-        }
-
-        var text = templates[position].text
-
-        val deptName = spinnerDept.selectedItem.toString()
-        val unitName = spinnerUnit.selectedItem.toString()
-        text = text.replace("{{Подразделение}}", deptName)
-        text = text.replace("{{Расчет}}", unitName)
-
+        val pos = spinnerTemplate.selectedItemPosition
+        if (pos < 0 || pos >= templates.size) { tvPreview.text = "Выберите шаблон"; return }
+        var text = templates[pos].text
+        text = text.replace("{{Подразделение}}", spinnerDept.selectedItem.toString())
+        text = text.replace("{{Расчет}}", spinnerUnit.selectedItem.toString())
         val subStr = if (selectedSubDepts.isNotEmpty()) selectedSubDepts.joinToString(", ") else ""
         text = text.replace("{{Соисполнители}}", subStr)
-
-        if (selectedSubDepts.isEmpty()) {
-            text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}.*?\\{\\{/Соисполнители\\}\\}"), "")
-        } else {
-            text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}(.*?)\\{\\{Соисполнители\\}\\}(.*?)\\{\\{/Соисполнители\\}\\}"), "$1$subStr$2")
+        if (selectedSubDepts.isEmpty()) text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}.*?\\{\\{/Соисполнители\\}\\}"), "")
+        else text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}(.*?)\\{\\{Соисполнители\\}\\}(.*?)\\{\\{/Соисполнители\\}\\}"), "$1$subStr$2")
+        val tvars = allVariables.filter { text.contains("{{${it.name}}}") }
+        var filled = 0
+        tvars.forEach { v ->
+            val valStr = variableValues[v.name] ?: ""
+            if (valStr.isNotEmpty()) { text = text.replace("{{${v.name}}}", valStr); filled++ }
+            else if (!v.required) text = text.replace("{{${v.name}}}", "")
         }
-
-        val templateVars = allVariables.filter { text.contains("{{${it.name}}}") }
-        var filledCount = 0
-
-        templateVars.forEach { variable ->
-            val placeholder = "{{${variable.name}}}"
-            val value = variableValues[variable.name] ?: ""
-
-            if (value.isNotEmpty()) {
-                text = text.replace(placeholder, value)
-                filledCount++
-            } else if (variable.required) {
-            } else {
-                text = text.replace(placeholder, "")
-            }
-        }
-
-        tvPreview.text = text
-        tvVarCount.text = "$filledCount из ${templateVars.size} переменных заполнено"
+        tvPreview.text = text; tvVarCount.text = "$filled из ${tvars.size} заполнено"
     }
 
     private fun autoSaveDraft() {
-        val prefs = getSharedPreferences("draft", MODE_PRIVATE)
-        prefs.edit()
-            .putString("draft_data", variableValues.toString())
-            .putString("draft_dept", selectedDept)
-            .putString("draft_unit", selectedUnit)
-            .putInt("draft_template", spinnerTemplate.selectedItemPosition)
-            .apply()
+        getSharedPreferences("draft", MODE_PRIVATE).edit().putString("data", variableValues.toString()).putString("dept", selectedDept).putString("unit", selectedUnit).putInt("tpl", spinnerTemplate.selectedItemPosition).apply()
         isDraftSaved = true
     }
 
     private fun loadDraft() {
-        val prefs = getSharedPreferences("draft", MODE_PRIVATE)
-        val draftData = prefs.getString("draft_data", "")
-        if (draftData.isNullOrEmpty()) return
-
+        val p = getSharedPreferences("draft", MODE_PRIVATE)
+        val d = p.getString("data", "") ?: ""; if (d.isEmpty()) return
         try {
-            val data = draftData.replace("{", "").replace("}", "").split(", ")
-            data.forEach { pair ->
-                val parts = pair.split("=")
-                if (parts.size == 2) {
-                    variableValues[parts[0]] = parts[1]
-                }
-            }
-
-            val deptPos = allDepts.indexOf(prefs.getString("draft_dept", ""))
-            if (deptPos >= 0) spinnerDept.setSelection(deptPos)
-
-            val templatePos = prefs.getInt("draft_template", 0)
-            if (templatePos < templates.size) spinnerTemplate.setSelection(templatePos)
-
+            d.replace("{", "").replace("}", "").split(", ").forEach { val parts = it.split("="); if (parts.size == 2) variableValues[parts[0]] = parts[1] }
+            val di = allDepts.indexOf(p.getString("dept", "")); if (di >= 0) spinnerDept.setSelection(di)
+            val ti = p.getInt("tpl", 0); if (ti < templates.size) spinnerTemplate.setSelection(ti)
             Toast.makeText(this, "💾 Черновик восстановлен", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-        }
+        } catch (_: Exception) {}
     }
 
-    private fun saveDraft() {
-        autoSaveDraft()
-        Toast.makeText(this, "💾 Черновик сохранен", Toast.LENGTH_SHORT).show()
-        finish()
-    }
+    private fun saveDraft() { autoSaveDraft(); finish() }
 
     private fun saveReport() {
-        val position = spinnerTemplate.selectedItemPosition
-        if (position < 0 || position >= templates.size) {
-            Toast.makeText(this, "Выберите шаблон", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+        val pos = spinnerTemplate.selectedItemPosition
+        if (pos < 0 || pos >= templates.size) { Toast.makeText(this, "Выберите шаблон", Toast.LENGTH_SHORT).show(); return }
         progressBar.visibility = View.VISIBLE
-
-        var text = templates[position].text
-
-        val deptName = spinnerDept.selectedItem.toString()
-        val unitName = spinnerUnit.selectedItem.toString()
-        text = text.replace("{{Подразделение}}", deptName)
-        text = text.replace("{{Расчет}}", unitName)
-
-        val subStr = if (selectedSubDepts.isNotEmpty()) selectedSubDepts.joinToString(", ") else ""
+        var text = templates[pos].text
+        text = text.replace("{{Подразделение}}", spinnerDept.selectedItem.toString())
+        text = text.replace("{{Расчет}}", spinnerUnit.selectedItem.toString())
+        val subStr = selectedSubDepts.joinToString(", ")
         text = text.replace("{{Соисполнители}}", subStr)
-        if (selectedSubDepts.isEmpty()) {
-            text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}.*?\\{\\{/Соисполнители\\}\\}"), "")
-        } else {
-            text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}(.*?)\\{\\{Соисполнители\\}\\}(.*?)\\{\\{/Соисполнители\\}\\}"), "$1$subStr$2")
+        if (selectedSubDepts.isEmpty()) text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}.*?\\{\\{/Соисполнители\\}\\}"), "")
+        else text = text.replace(Regex("\\{\\{#Соисполнители\\}\\}(.*?)\\{\\{Соисполнители\\}\\}(.*?)\\{\\{/Соисполнители\\}\\}"), "$1$subStr$2")
+        val missing = mutableListOf<String>()
+        allVariables.filter { it.name != "Расчет" }.forEach { v ->
+            val valStr = variableValues[v.name] ?: ""
+            if (v.required && valStr.isEmpty()) { missing.add(v.name); return@forEach }
+            if (valStr.isNotEmpty()) text = text.replace("{{${v.name}}}", valStr) else text = text.replace("{{${v.name}}}", "")
         }
-
-        var allFilled = true
-        val missingFields = mutableListOf<String>()
-
-        allVariables.forEach { variable ->
-            if (variable.name == "Расчет") return@forEach
-            val value = variableValues[variable.name] ?: ""
-
-            if (variable.required && value.isEmpty()) {
-                allFilled = false
-                missingFields.add(variable.name)
-            } else if (value.isNotEmpty()) {
-                text = text.replace("{{${variable.name}}}", value)
-            } else {
-                text = text.replace("{{${variable.name}}}", "")
-            }
-        }
-
-        if (!allFilled) {
-            progressBar.visibility = View.GONE
-            val message = "Заполните обязательные поля:\n" + missingFields.joinToString(", ")
-            AlertDialog.Builder(this)
-                .setTitle("Ошибка")
-                .setMessage(message)
-                .setPositiveButton("OK", null)
-                .show()
-            return
-        }
-
-        val report = Report(
-            dept = deptName,
-            templateName = templates[position].name,
-            text = text,
-            variables = variableValues.toString(),
-            subDepts = selectedSubDepts.joinToString(","),
-            status = "saved"
-        )
-
+        if (missing.isNotEmpty()) { progressBar.visibility = View.GONE; AlertDialog.Builder(this).setTitle("Ошибка").setMessage("Заполните: ${missing.joinToString(", ")}").setPositiveButton("OK", null).show(); return }
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val id = AppDatabase.getInstance(this@CreateReportActivity).reportDao().insert(report)
-                val fileName = "Отчет_${id}.docx"
-                val file = DocxGenerator.generateReport(this@CreateReportActivity, text, fileName)
+                val id = AppDatabase.getInstance(this@CreateReportActivity).reportDao().insert(Report(dept = spinnerDept.selectedItem.toString(), templateName = templates[pos].name, text = text, variables = variableValues.toString(), subDepts = selectedSubDepts.joinToString(","), status = "saved"))
+                val file = DocxGenerator.generateReport(this@CreateReportActivity, text, "Отчет_$id.docx")
                 withContext(Dispatchers.Main) {
-                    progressBar.visibility = View.GONE
-                    getSharedPreferences("draft", MODE_PRIVATE).edit().clear().apply()
-                    if (file != null) {
-                        Toast.makeText(this@CreateReportActivity, "✅ Сохранено: ${file.absolutePath}", Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(this@CreateReportActivity, "❌ Ошибка сохранения файла", Toast.LENGTH_SHORT).show()
-                    }
-                    finish()
+                    progressBar.visibility = View.GONE; getSharedPreferences("draft", MODE_PRIVATE).edit().clear().apply()
+                    Toast.makeText(this@CreateReportActivity, if (file != null) "✅ Сохранено" else "❌ Ошибка файла", Toast.LENGTH_SHORT).show(); finish()
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    progressBar.visibility = View.GONE
-                    Toast.makeText(this@CreateReportActivity, "❌ Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                withContext(Dispatchers.Main) { progressBar.visibility = View.GONE; Toast.makeText(this@CreateReportActivity, "❌ ${e.message}", Toast.LENGTH_SHORT).show() }
             }
         }
     }
 
-    // Исправлено: ViewHolder теперь inner class внутри inner class SubDeptAdapter
     inner class SubDeptAdapter(
         private val items: List<String>,
         private val selected: MutableList<String>,
         private val onUpdate: (MutableList<String>) -> Unit
     ) : RecyclerView.Adapter<SubDeptAdapter.ViewHolder>() {
-
-        inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            val checkBox: CheckBox = itemView.findViewById(R.id.cb_subdept)
+        inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) { val checkBox: CheckBox = itemView.findViewById(R.id.cb_subdept) }
+        override fun onCreateViewHolder(p: ViewGroup, t: Int) = ViewHolder(LayoutInflater.from(p.context).inflate(R.layout.item_subdept_check, p, false))
+        override fun onBindViewHolder(h: ViewHolder, pos: Int) {
+            h.checkBox.text = items[pos]; h.checkBox.isChecked = selected.contains(items[pos])
+            h.checkBox.setOnCheckedChangeListener { _, ok -> if (ok) selected.add(items[pos]) else selected.remove(items[pos]); onUpdate(selected) }
         }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_subdept_check, parent, false)
-            return ViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = items[position]
-            holder.checkBox.text = item
-            holder.checkBox.isChecked = selected.contains(item)
-            holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) {
-                    if (!selected.contains(item)) selected.add(item)
-                } else {
-                    selected.remove(item)
-                }
-                onUpdate(selected)
-            }
-        }
-
-        override fun getItemCount(): Int = items.size
+        override fun getItemCount() = items.size
     }
 }
