@@ -169,6 +169,7 @@ class CreateReportActivity : AppCompatActivity() {
             rvSubDepts.visibility = View.VISIBLE
             tvSubDeptsHint.visibility = View.VISIBLE
             
+            // Используем адаптер, созданный в классе
             val adapter = SubDeptAdapter(
                 items = items,
                 selected = selectedSubDepts,
@@ -559,7 +560,7 @@ class CreateReportActivity : AppCompatActivity() {
     }
 
     // ============================================================
-    // INNER CLASS — ОБЪЯВЛЕН В ТЕЛЕ КЛАССА
+    // INNER CLASS — ОБЪЯВЛЕН В ТЕЛЕ КЛАССА (ПОСЛЕ ВСЕХ ФУНКЦИЙ)
     // ============================================================
     inner class SubDeptAdapter(
         private val items: List<String>,
