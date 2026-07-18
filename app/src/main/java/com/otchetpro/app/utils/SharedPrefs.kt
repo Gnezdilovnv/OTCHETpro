@@ -11,9 +11,9 @@ object SharedPrefs {
     private val lock = Any()
 
     fun getDept(c: Context) = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("dept", "БпЛА") ?: "БпЛА"
-    fun saveDept(c: Context, d: String) { 
+    fun saveDept(c: Context, d: String) {
         synchronized(lock) {
-            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("dept", d).apply() 
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("dept", d).apply()
         }
     }
 
@@ -23,9 +23,9 @@ object SharedPrefs {
             return try { gson.fromJson(j, object : TypeToken<List<Template>>() {}.type) } catch (e: Exception) { emptyList() }
         }
     }
-    fun saveTemplates(c: Context, l: List<Template>) { 
+    fun saveTemplates(c: Context, l: List<Template>) {
         synchronized(lock) {
-            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("templates", gson.toJson(l)).apply() 
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("templates", gson.toJson(l)).apply()
         }
     }
 
@@ -35,9 +35,9 @@ object SharedPrefs {
             return try { gson.fromJson(j, object : TypeToken<List<Variable>>() {}.type) } catch (e: Exception) { emptyList() }
         }
     }
-    fun saveVariables(c: Context, l: List<Variable>) { 
+    fun saveVariables(c: Context, l: List<Variable>) {
         synchronized(lock) {
-            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("vars", gson.toJson(l)).apply() 
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("vars", gson.toJson(l)).apply()
         }
     }
 
@@ -47,9 +47,9 @@ object SharedPrefs {
             return try { gson.fromJson(j, object : TypeToken<List<Recipient>>() {}.type) } catch (e: Exception) { emptyList() }
         }
     }
-    fun saveRecipients(c: Context, l: List<Recipient>) { 
+    fun saveRecipients(c: Context, l: List<Recipient>) {
         synchronized(lock) {
-            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("recips", gson.toJson(l)).apply() 
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("recips", gson.toJson(l)).apply()
         }
     }
 
@@ -59,21 +59,32 @@ object SharedPrefs {
             return try { gson.fromJson(j, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { emptyList() }
         }
     }
-    fun saveSubDepts(c: Context, l: List<String>) { 
+    fun saveSubDepts(c: Context, l: List<String>) {
         synchronized(lock) {
-            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("subs", gson.toJson(l)).apply() 
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("subs", gson.toJson(l)).apply()
         }
     }
 
     fun getDepts(c: Context): List<String> {
         synchronized(lock) {
             val j = c.getSharedPreferences(P, Context.MODE_PRIVATE).getString("depts", "[]") ?: "[]"
-            return try { gson.fromJson(j, object : TypeToken<List<String>>() {}.type) } catch (e: Exception) { listOf("БпЛА", "Миномет", "Артиллерия", "Танки") }
+            val parsed: List<String> = try {
+                gson.fromJson(j, object : TypeToken<List<String>>() {}.type)
+            } catch (e: Exception) {
+                emptyList()
+            }
+            return if (parsed.isEmpty()) {
+                val defaults = listOf("БпЛА", "Миномет", "Артиллерия", "Танки")
+                saveDepts(c, defaults)
+                defaults
+            } else {
+                parsed
+            }
         }
     }
-    fun saveDepts(c: Context, l: List<String>) { 
+    fun saveDepts(c: Context, l: List<String>) {
         synchronized(lock) {
-            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("depts", gson.toJson(l)).apply() 
+            c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putString("depts", gson.toJson(l)).apply()
         }
     }
 
