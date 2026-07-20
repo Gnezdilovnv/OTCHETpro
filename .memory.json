@@ -8,7 +8,8 @@
     }
   ],
   "patterns": {
-    "code_analysis": 11,
-    "structure": 1
+    "code_analysis": 15,
+    "structure": 1,
+    "git_push": 1
   }
 }
